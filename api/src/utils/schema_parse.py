@@ -1,283 +1,330 @@
 import re
-import sqlparse
-from typing import Dict, List, Optional, Tuple, Any
-from datetime import datetime
-from src.lib.schemas import (
-    SchemaCollection, DatabaseSchema, TableSchema, ColumnAttribute,
-    ColumnConstraint, ConstraintType, DataType
-)
+import json
+import sys
+import os
+from typing import Dict, List, Optional, Any
+from pathlib import Path
 
 class SQLSchemaParser:
     def __init__(self):
-        self.data_type_patterns = {
-            r'(VAR)?CHAR\((\d+)\)': ('VARCHAR', 'length'),
-            r'(DECIMAL|NUMERIC)\((\d+),(\d+)\)': ('DECIMAL', 'precision_scale'),
-            r'(DECIMAL|NUMERIC)\((\d+)\)': ('DECIMAL', 'precision'),
-            r'(FLOAT|REAL)\((\d+),(\d+)\)': ('FLOAT', 'precision_scale'),
-            r'(FLOAT|REAL)\((\d+)\)': ('FLOAT', 'precision'),
-            r'ENUM\((.*?)\)': ('ENUM', 'enum_values'),
-        }
+        self.databases = {}
+        self.current_database = None
+        self.parsed_schema = None
         
-    async def parse_sql_content(self, sql_content: str, database_name: Optional[str] = None) -> SchemaCollection:
-        """Parse SQL DDL content and return structured schema"""
-        databases = {}
-        current_db = database_name or "default"
+    def parse_sql_file(self, sql_file_path: str, output_dir: str) -> Dict[str, Any]:
+        """
+        Parse SQL file and generate JSON schema
         
-        # Split SQL content into statements
-        statements = sqlparse.split(sql_content)
-        
-        for stmt in statements:
-            if not stmt.strip():
-                continue
-                
-            parsed = sqlparse.parse(stmt)[0]
+        Args:
+            sql_file_path: Path to SQL file
+            output_dir: Directory to save JSON file (default: same as SQL file)
             
-            # Extract database name if USE statement
-            db_match = re.search(r'USE\s+(\w+)', stmt, re.IGNORECASE)
-            if db_match:
-                current_db = db_match.group(1)
+        Returns:
+            Dict containing parsed schema
+        """
+        if not os.path.exists(sql_file_path):
+            raise FileNotFoundError(f"SQL file not found: {sql_file_path}")
+            
+        with open(sql_file_path, 'r', encoding='utf-8') as file:
+            sql_content = file.read()
+            
+        # Parse the SQL content
+        schema = self._parse_sql_content(sql_content)
+        
+        # Determine output path
+        if output_dir is None:
+            output_dir = os.path.dirname(sql_file_path)
+            
+        sql_filename = Path(sql_file_path).stem
+        json_file_path = os.path.join(output_dir, f"{sql_filename}_schema.json")
+        
+        # Save to JSON file
+        with open(json_file_path, 'w', encoding='utf-8') as json_file:
+            json.dump(schema, json_file, indent=2)
+            
+        print(f"Schema parsed and saved to: {json_file_path}")
+        
+        # Store parsed schema for access throughout codebase
+        self.parsed_schema = schema
+        
+        return schema
+    
+    def _parse_sql_content(self, sql_content: str) -> Dict[str, Any]:
+        """Parse SQL content and return structured schema"""
+        self.databases = {}
+        self.current_database = None
+        
+        # Clean and split SQL content
+        sql_content = self._clean_sql_content(sql_content)
+        statements = self._split_sql_statements(sql_content)
+        
+        for statement in statements:
+            statement = statement.strip()
+            if not statement:
                 continue
                 
-            # Check if it's a CREATE TABLE statement
-            if self._is_create_table(parsed):
-                table_schema = await self._parse_create_table(stmt)
-                if table_schema:
-                    if current_db not in databases:
-                        databases[current_db] = DatabaseSchema(
-                            name=current_db,
-                            tables={}
-                        )
-                    databases[current_db].tables[table_schema.name] = table_schema
-        
-        # Calculate statistics
-        total_tables = sum(len(db.tables) for db in databases.values())
-        
-        return SchemaCollection(
-            databases=databases,
-            generated_at=datetime.now().isoformat(),
-            total_databases=len(databases),
-            total_tables=total_tables
-        )
+            if statement.upper().startswith('USE '):
+                self._parse_use_statement(statement)
+            elif statement.upper().startswith('CREATE TABLE'):
+                self._parse_create_table_statement(statement)
+                
+        return {"databases": list(self.databases.values())}
     
-    def _is_create_table(self, parsed_stmt) -> bool:
-        """Check if the statement is a CREATE TABLE"""
-        tokens = [t for t in parsed_stmt.flatten() if not t.is_whitespace]
-        return (len(tokens) >= 3 and 
-                tokens[0].ttype is sqlparse.tokens.Keyword and
-                tokens[0].value.upper() == 'CREATE' and
-                tokens[1].ttype is sqlparse.tokens.Keyword and
-                tokens[1].value.upper() == 'TABLE')
+    def _clean_sql_content(self, content: str) -> str:
+        """Clean SQL content by removing comments"""
+        # Remove single-line comments
+        content = re.sub(r'--.*$', '', content, flags=re.MULTILINE)
+        # Remove multi-line comments
+        content = re.sub(r'/\*.*?\*/', '', content, flags=re.DOTALL)
+        return content
     
-    async def _parse_create_table(self, stmt: str) -> Optional[TableSchema]:
+    def _split_sql_statements(self, content: str) -> List[str]:
+        """Split SQL content into individual statements"""
+        statements = []
+        current_statement = []
+        
+        lines = content.split('\n')
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+                
+            current_statement.append(line)
+            
+            if line.endswith(';'):
+                statements.append(' '.join(current_statement))
+                current_statement = []
+                
+        if current_statement:
+            statements.append(' '.join(current_statement))
+            
+        return statements
+    
+    def _parse_use_statement(self, statement: str):
+        """Parse USE statement to set current database"""
+        match = re.search(r'USE\s+(\w+)', statement, re.IGNORECASE)
+        if match:
+            db_name = match.group(1)
+            self.current_database = db_name
+            if db_name not in self.databases:
+                self.databases[db_name] = {
+                    "name": db_name,
+                    "tables": []
+                }
+    
+    def _parse_create_table_statement(self, statement: str):
         """Parse CREATE TABLE statement"""
         # Extract table name
-        table_match = re.search(r'CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(\w+)', stmt, re.IGNORECASE)
+        table_match = re.search(r'CREATE TABLE\s+(\w+)\s*\(', statement, re.IGNORECASE)
         if not table_match:
-            return None
+            return
             
         table_name = table_match.group(1)
         
-        # Extract column definitions
-        columns_match = re.search(r'\((.*)\)', stmt, re.DOTALL)
-        if not columns_match:
-            return None
+        # Use default database if none specified
+        if self.current_database is None:
+            self.current_database = "default"
+            self.databases[self.current_database] = {
+                "name": self.current_database,
+                "tables": []
+            }
+        
+        # Extract table definition content
+        table_content = self._extract_table_content(statement)
+        attributes = self._parse_table_attributes(table_content)
+        
+        table_schema = {
+            "name": table_name,
+            "attributes": attributes
+        }
+        
+        self.databases[self.current_database]["tables"].append(table_schema)
+    
+    def _extract_table_content(self, statement: str) -> str:
+        """Extract content between parentheses in CREATE TABLE statement"""
+        # Find the opening parenthesis after CREATE TABLE
+        start_idx = statement.find('(')
+        if start_idx == -1:
+            return ""
             
-        columns_def = columns_match.group(1)
-        columns = {}
+        # Find the matching closing parenthesis
+        paren_count = 0
+        end_idx = start_idx
+        
+        for i in range(start_idx, len(statement)):
+            if statement[i] == '(':
+                paren_count += 1
+            elif statement[i] == ')':
+                paren_count -= 1
+                if paren_count == 0:
+                    end_idx = i
+                    break
+                    
+        return statement[start_idx + 1:end_idx]
+    
+    def _parse_table_attributes(self, table_content: str) -> List[Dict[str, Any]]:
+        """Parse table attributes from table content"""
+        attributes = []
+        
+        # Split by commas, but be careful with nested parentheses
+        column_definitions = self._split_column_definitions(table_content)
+        
         primary_keys = []
-        foreign_keys = {}
-        unique_constraints = []
-        check_constraints = []
+        foreign_keys = []
         
-        # Split by commas (considering nested parentheses)
-        column_parts = self._split_column_definitions(columns_def)
-        
-        for part in column_parts:
-            part = part.strip()
-            if not part:
+        for col_def in column_definitions:
+            col_def = col_def.strip()
+            if not col_def:
                 continue
                 
-            # Check for table-level constraints
-            if part.upper().startswith('PRIMARY KEY'):
-                pk_match = re.search(r'PRIMARY\s+KEY\s*\((.*?)\)', part, re.IGNORECASE)
-                if pk_match:
-                    primary_keys.extend([col.strip() for col in pk_match.group(1).split(',')])
+            # Check if it's a constraint definition
+            if col_def.upper().startswith('PRIMARY KEY'):
+                primary_keys.extend(self._extract_primary_key_columns(col_def))
                 continue
-                
-            if part.upper().startswith('FOREIGN KEY'):
-                fk_match = re.search(r'FOREIGN\s+KEY\s*\((.*?)\)\s*REFERENCES\s+(\w+)\s*\((.*?)\)', part, re.IGNORECASE)
-                if fk_match:
-                    local_col = fk_match.group(1).strip()
-                    ref_table = fk_match.group(2).strip()
-                    ref_col = fk_match.group(3).strip()
-                    foreign_keys[local_col] = {"table": ref_table, "column": ref_col}
+            elif col_def.upper().startswith('FOREIGN KEY'):
+                fk_info = self._extract_foreign_key_info(col_def)
+                if fk_info:
+                    foreign_keys.append(fk_info)
                 continue
-                
-            if part.upper().startswith('UNIQUE'):
-                unique_match = re.search(r'UNIQUE\s*\((.*?)\)', part, re.IGNORECASE)
-                if unique_match:
-                    unique_constraints.append([col.strip() for col in unique_match.group(1).split(',')])
-                continue
-                
-            if part.upper().startswith('CHECK'):
-                check_constraints.append(part)
+            elif col_def.upper().startswith(('INDEX', 'KEY', 'UNIQUE KEY')):
                 continue
                 
             # Parse column definition
-            column = await self._parse_column_definition(part)
-            if column:
-                columns[column.name] = column
-                
-        return TableSchema(
-            name=table_name,
-            columns=columns,
-            primary_keys=primary_keys,
-            foreign_keys=foreign_keys,
-            unique_constraints=unique_constraints,
-            check_constraints=check_constraints
-        )
+            attribute = self._parse_column_definition(col_def)
+            if attribute:
+                attributes.append(attribute)
+        
+        # Apply primary key and foreign key constraints
+        self._apply_constraints_to_attributes(attributes, primary_keys, foreign_keys)
+        
+        return attributes
     
-    def _split_column_definitions(self, columns_def: str) -> List[str]:
-        """Split column definitions considering nested parentheses"""
-        parts = []
-        current = ""
+    def _split_column_definitions(self, content: str) -> List[str]:
+        """Split column definitions by commas, handling nested parentheses"""
+        definitions = []
+        current_def = []
         paren_count = 0
         
-        for char in columns_def:
+        i = 0
+        while i < len(content):
+            char = content[i]
+            
             if char == '(':
                 paren_count += 1
+                current_def.append(char)
             elif char == ')':
                 paren_count -= 1
+                current_def.append(char)
             elif char == ',' and paren_count == 0:
-                parts.append(current.strip())
-                current = ""
-                continue
-            current += char
+                definitions.append(''.join(current_def).strip())
+                current_def = []
+            else:
+                current_def.append(char)
             
-        if current.strip():
-            parts.append(current.strip())
+            i += 1
+        
+        if current_def:
+            definitions.append(''.join(current_def).strip())
             
-        return parts
+        return definitions
     
-    async def _parse_column_definition(self, col_def: str) -> Optional[ColumnAttribute]:
+    def _parse_column_definition(self, col_def: str) -> Optional[Dict[str, Any]]:
         """Parse individual column definition"""
+        # Basic pattern: column_name data_type [constraints...]
         parts = col_def.split()
         if len(parts) < 2:
             return None
             
-        col_name = parts[0]
-        data_type_str = parts[1]
+        column_name = parts[0]
+        data_type = parts[1]
         
-        # Parse data type
-        data_type, length, precision, scale, enum_values = self._parse_data_type(data_type_str)
+        # Handle data types with parameters like VARCHAR(100)
+        if '(' in data_type:
+            type_match = re.match(r'(\w+)\([^)]*\)', data_type)
+            if type_match:
+                data_type = type_match.group(1)
         
-        # Parse constraints
-        constraints = []
-        nullable = True
-        default_value = None
-        auto_increment = False
-        
-        col_def_upper = col_def.upper()
-        
-        if 'NOT NULL' in col_def_upper:
-            nullable = False
-            constraints.append(ColumnConstraint(
-                type=ConstraintType.NOT_NULL,
-                definition="NOT NULL"
-            ))
-            
-        if 'PRIMARY KEY' in col_def_upper:
-            constraints.append(ColumnConstraint(
-                type=ConstraintType.PRIMARY_KEY,
-                definition="PRIMARY KEY"
-            ))
-            
-        if 'UNIQUE' in col_def_upper:
-            constraints.append(ColumnConstraint(
-                type=ConstraintType.UNIQUE,
-                definition="UNIQUE"
-            ))
-            
-        if 'AUTO_INCREMENT' in col_def_upper or 'AUTOINCREMENT' in col_def_upper:
-            auto_increment = True
-            
-        # Extract default value
-        default_match = re.search(r'DEFAULT\s+(.*?)(?:\s|$)', col_def, re.IGNORECASE)
-        if default_match:
-            default_value = default_match.group(1).strip()
-            constraints.append(ColumnConstraint(
-                type=ConstraintType.DEFAULT,
-                definition=f"DEFAULT {default_value}"
-            ))
-            
-        # Extract foreign key reference
-        fk_match = re.search(r'REFERENCES\s+(\w+)\s*\((\w+)\)', col_def, re.IGNORECASE)
-        if fk_match:
-            constraints.append(ColumnConstraint(
-                type=ConstraintType.FOREIGN_KEY,
-                definition=f"REFERENCES {fk_match.group(1)}({fk_match.group(2)})",
-                referenced_table=fk_match.group(1),
-                referenced_column=fk_match.group(2)
-            ))
-            
-        return ColumnAttribute(
-            name=col_name,
-            data_type=data_type,
-            length=length,
-            precision=precision,
-            scale=scale,
-            nullable=nullable,
-            default_value=default_value,
-            auto_increment=auto_increment,
-            constraints=constraints,
-            enum_values=enum_values
-        )
-    
-    def _parse_data_type(self, data_type_str: str) -> Tuple[str, Optional[int], Optional[int], Optional[int], Optional[List[str]]]:
-        """Parse data type string and extract type, length, precision, scale, enum values"""
-        data_type_upper = data_type_str.upper()
-        
-        # Check patterns
-        for pattern, (dtype, param_type) in self.data_type_patterns.items():
-            match = re.match(pattern, data_type_upper)
-            if match:
-                if param_type == 'length':
-                    return dtype, int(match.group(2)), None, None, None
-                elif param_type == 'precision':
-                    return dtype, None, int(match.group(2)), None, None
-                elif param_type == 'precision_scale':
-                    return dtype, None, int(match.group(2)), int(match.group(3)), None
-                elif param_type == 'enum_values':
-                    enum_vals = [val.strip().strip("'\"") for val in match.group(1).split(',')]
-                    return dtype, None, None, None, enum_vals
-                    
-        # Default mapping
-        type_mapping = {
-            'INT': 'INTEGER',
-            'TINYINT': 'INTEGER',
-            'SMALLINT': 'SMALLINT',
-            'MEDIUMINT': 'INTEGER',
-            'BIGINT': 'BIGINT',
-            'FLOAT': 'FLOAT',
-            'DOUBLE': 'DOUBLE',
-            'REAL': 'REAL',
-            'DECIMAL': 'DECIMAL',
-            'NUMERIC': 'NUMERIC',
-            'VARCHAR': 'VARCHAR',
-            'CHAR': 'CHAR',
-            'TEXT': 'TEXT',
-            'MEDIUMTEXT': 'TEXT',
-            'LONGTEXT': 'TEXT',
-            'DATE': 'DATE',
-            'TIME': 'TIME',
-            'DATETIME': 'TIMESTAMP',
-            'TIMESTAMP': 'TIMESTAMP',
-            'BOOLEAN': 'BOOLEAN',
-            'BOOL': 'BOOLEAN',
-            'BLOB': 'BLOB',
-            'JSON': 'JSON',
-            'UUID': 'UUID'
+        attribute = {
+            "name": column_name,
+            "type": data_type.upper(),
+            "constraints": []
         }
         
-        base_type = data_type_upper.split('(')[0]
-        return type_mapping.get(base_type, base_type), None, None, None, None
+        return attribute
+    
+    def _extract_primary_key_columns(self, constraint_def: str) -> List[str]:
+        """Extract column names from PRIMARY KEY constraint"""
+        match = re.search(r'PRIMARY KEY\s*\(([^)]+)\)', constraint_def, re.IGNORECASE)
+        if match:
+            columns_str = match.group(1)
+            columns = [col.strip() for col in columns_str.split(',')]
+            return columns
+        return []
+    
+    def _extract_foreign_key_info(self, constraint_def: str) -> Optional[Dict[str, str]]:
+        """Extract foreign key information"""
+        # Pattern: FOREIGN KEY (column) REFERENCES table(column)
+        match = re.search(
+            r'FOREIGN KEY\s*\(([^)]+)\)\s+REFERENCES\s+(\w+)\s*\(([^)]+)\)',
+            constraint_def,
+            re.IGNORECASE
+        )
+        
+        if match:
+            local_column = match.group(1).strip()
+            referenced_table = match.group(2).strip()
+            referenced_column = match.group(3).strip()
+            
+            return {
+                "column": local_column,
+                "referenced_table": referenced_table,
+                "referenced_column": referenced_column
+            }
+        return None
+    
+    def _apply_constraints_to_attributes(self, attributes: List[Dict], primary_keys: List[str], foreign_keys: List[Dict]):
+        """Apply primary key and foreign key constraints to attributes"""
+        # Create a mapping for quick lookup
+        attr_map = {attr["name"]: attr for attr in attributes}
+        
+        # Apply primary key constraints
+        for pk_column in primary_keys:
+            if pk_column in attr_map:
+                attr_map[pk_column]["constraints"].append("PRIMARY_KEY")
+        
+        # Apply foreign key constraints
+        for fk_info in foreign_keys:
+            column_name = fk_info["column"]
+            if column_name in attr_map:
+                fk_constraint = f"FOREIGN_KEY_REFERENCES_{fk_info['referenced_table']}.{fk_info['referenced_column']}"
+                attr_map[column_name]["constraints"].append(fk_constraint)
+    
+    def get_parsed_schema(self) -> Optional[Dict[str, Any]]:
+        """Get the last parsed schema"""
+        return self.parsed_schema
+
+def main():
+    """Main function for command-line usage"""
+    if len(sys.argv) < 2:
+        print("Usage: python schema_parse.py <sql_file_path> [output_directory]")
+        sys.exit(1)
+    
+    sql_file_path = sys.argv[1]
+    output_dir = sys.argv[2] 
+    
+    try:
+        parser = SQLSchemaParser()
+        schema = parser.parse_sql_file(sql_file_path, output_dir)
+        
+        print("Schema parsing completed successfully!")
+        print(f"Found {len(schema['databases'])} database(s)")
+        
+        for db in schema['databases']:
+            print(f"  Database: {db['name']} ({len(db['tables'])} tables)")
+            
+    except Exception as e:
+        print(f"Error parsing SQL file: {str(e)}")
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()

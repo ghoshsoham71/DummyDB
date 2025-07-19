@@ -83,19 +83,21 @@ class SchemaCollection(BaseModel):
     total_tables: int
 
 class ParseRequest(BaseModel):
-    model_config = ConfigDict(str_strip_whitespace=True)
-    
-    sql_content: str = Field(..., description="SQL DDL content to parse")
-    database_name: Optional[str] = Field(None, description="Override database name")
+    sql_content: str
+    database_name: Optional[str] = None
 
 class ParseResponse(BaseModel):
-    model_config = ConfigDict(str_strip_whitespace=True)
-    
     success: bool
-    parse_schema: Optional[SchemaCollection] = None
+    schema_id: Optional[str] = None
     message: str
     processing_time: float
-    statistics: Dict[str, int] = Field(default_factory=dict)
+    statistics: Dict[str, Any] = {}
+    file_path: Optional[str] = None
+
+class HealthResponse(BaseModel):
+    status: str
+    version: str
+    schemas_in_memory: int
 
 class ErrorResponse(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
