@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { ModeToggle } from "../components/ModeToggle/modetoggle";
+import { ModeToggle } from "../components/ModeToggle/mode-toggle";
 
 export default function Home() {
   return (
