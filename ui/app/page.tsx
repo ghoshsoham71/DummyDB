@@ -1,6 +1,7 @@
-import { Navbar } from "@/components/Navbar/Navbar";
+import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
-import { Footer } from "@/components/Footer/Footer";
+import { Footer } from "@/components/Footer";
+import Link from "next/link";
 
 export default function Home() {
   return (
@@ -15,7 +16,9 @@ export default function Home() {
           Effortlessly create realistic mock data for SQL, NoSQL, and Graph
           databases. Perfect for testing, prototyping, and demos.
         </p>
-        <Button size={"lg"}>Get Started</Button>
+        <Link href="/generate">
+          <Button size={"lg"}>Get Started</Button>
+        </Link>
       </main>
       <Footer />
     </div>
