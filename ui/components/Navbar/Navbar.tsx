@@ -1,9 +1,9 @@
-import { ModeToggle } from "../ModeToggle/mode-toggle";
+import { ModeToggle } from "../ModeToggle/ModeToggle";
 import { Button } from "../ui/button";
 
 export function Navbar() {
   return (
-    <nav className="w-full flex items-center justify-between py-6 px-6 sm:px-12 border-b border-border bg-background/80 backdrop-blur sticky top-0 z-10">
+    <nav className="w-full flex items-center justify-between p-6 sm:px-12 border-b border-border bg-background/80 backdrop-blur sticky top-0 z-10">
       <span className="text-2xl font-bold tracking-tight select-none">
         DummyDB
       </span>
