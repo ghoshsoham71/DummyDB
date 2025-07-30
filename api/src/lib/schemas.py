@@ -98,6 +98,7 @@ class HealthResponse(BaseModel):
     status: str
     version: str
     schemas_in_memory: int
+    additional_info: Optional[Dict[str, Any]] = None
 
 class ErrorResponse(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)

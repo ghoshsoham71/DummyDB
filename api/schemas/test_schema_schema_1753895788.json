@@ -1,0 +1,450 @@
+{
+  "databases": [
+    {
+      "name": "ecommerce",
+      "tables": [
+        {
+          "name": "categories",
+          "attributes": [
+            {
+              "name": "id",
+              "type": "INT",
+              "constraints": [
+                "AUTO_INCREMENT"
+              ]
+            },
+            {
+              "name": "name",
+              "type": "VARCHAR",
+              "constraints": [
+                "NOT_NULL",
+                "UNIQUE"
+              ],
+              "type_params": "100"
+            },
+            {
+              "name": "description",
+              "type": "TEXT",
+              "constraints": []
+            },
+            {
+              "name": "parent_id",
+              "type": "INT",
+              "constraints": [
+                "FOREIGN_KEY_REFERENCES_categories.id"
+              ]
+            },
+            {
+              "name": "created_at",
+              "type": "TIMESTAMP",
+              "constraints": [],
+              "default": "CURRENT_TIMESTAMP"
+            }
+          ]
+        },
+        {
+          "name": "users",
+          "attributes": [
+            {
+              "name": "id",
+              "type": "INT",
+              "constraints": [
+                "AUTO_INCREMENT"
+              ]
+            },
+            {
+              "name": "username",
+              "type": "VARCHAR",
+              "constraints": [
+                "NOT_NULL",
+                "UNIQUE"
+              ],
+              "type_params": "50"
+            },
+            {
+              "name": "email",
+              "type": "VARCHAR",
+              "constraints": [
+                "NOT_NULL",
+                "UNIQUE"
+              ],
+              "type_params": "100"
+            },
+            {
+              "name": "password_hash",
+              "type": "VARCHAR",
+              "constraints": [
+                "NOT_NULL"
+              ],
+              "type_params": "255"
+            },
+            {
+              "name": "first_name",
+              "type": "VARCHAR",
+              "constraints": [],
+              "type_params": "50"
+            },
+            {
+              "name": "last_name",
+              "type": "VARCHAR",
+              "constraints": [],
+              "type_params": "50"
+            },
+            {
+              "name": "phone",
+              "type": "VARCHAR",
+              "constraints": [],
+              "type_params": "20"
+            },
+            {
+              "name": "date_of_birth",
+              "type": "DATE",
+              "constraints": []
+            },
+            {
+              "name": "created_at",
+              "type": "TIMESTAMP",
+              "constraints": [],
+              "default": "CURRENT_TIMESTAMP"
+            },
+            {
+              "name": "updated_at",
+              "type": "TIMESTAMP",
+              "constraints": [],
+              "default": "CURRENT_TIMESTAMP"
+            },
+            {
+              "name": "status",
+              "type": "ENUM('ACTIVE',",
+              "constraints": [],
+              "default": "'ACTIVE'"
+            },
+            {
+              "name": "is_verified",
+              "type": "BOOLEAN",
+              "constraints": [],
+              "default": "FALSE"
+            }
+          ]
+        },
+        {
+          "name": "products",
+          "attributes": [
+            {
+              "name": "id",
+              "type": "INT",
+              "constraints": [
+                "AUTO_INCREMENT"
+              ]
+            },
+            {
+              "name": "name",
+              "type": "VARCHAR",
+              "constraints": [
+                "NOT_NULL"
+              ],
+              "type_params": "200"
+            },
+            {
+              "name": "description",
+              "type": "TEXT",
+              "constraints": []
+            },
+            {
+              "name": "price",
+              "type": "DECIMAL",
+              "constraints": [
+                "NOT_NULL"
+              ],
+              "type_params": "10,2"
+            },
+            {
+              "name": "cost_price",
+              "type": "DECIMAL",
+              "constraints": [],
+              "type_params": "10,2"
+            },
+            {
+              "name": "stock_quantity",
+              "type": "INT",
+              "constraints": [],
+              "default": "0"
+            },
+            {
+              "name": "category_id",
+              "type": "INT",
+              "constraints": [
+                "NOT_NULL",
+                "FOREIGN_KEY_REFERENCES_categories.id"
+              ]
+            },
+            {
+              "name": "brand",
+              "type": "VARCHAR",
+              "constraints": [],
+              "type_params": "100"
+            },
+            {
+              "name": "sku",
+              "type": "VARCHAR",
+              "constraints": [
+                "UNIQUE"
+              ],
+              "type_params": "50"
+            },
+            {
+              "name": "weight",
+              "type": "DECIMAL",
+              "constraints": [],
+              "type_params": "8,2"
+            },
+            {
+              "name": "dimensions",
+              "type": "VARCHAR",
+              "constraints": [],
+              "type_params": "50"
+            },
+            {
+              "name": "created_at",
+              "type": "TIMESTAMP",
+              "constraints": [],
+              "default": "CURRENT_TIMESTAMP"
+            },
+            {
+              "name": "updated_at",
+              "type": "TIMESTAMP",
+              "constraints": [],
+              "default": "CURRENT_TIMESTAMP"
+            },
+            {
+              "name": "is_active",
+              "type": "BOOLEAN",
+              "constraints": [],
+              "default": "TRUE"
+            }
+          ]
+        },
+        {
+          "name": "orders",
+          "attributes": [
+            {
+              "name": "id",
+              "type": "INT",
+              "constraints": [
+                "AUTO_INCREMENT"
+              ]
+            },
+            {
+              "name": "user_id",
+              "type": "INT",
+              "constraints": [
+                "NOT_NULL",
+                "FOREIGN_KEY_REFERENCES_users.id"
+              ]
+            },
+            {
+              "name": "order_number",
+              "type": "VARCHAR",
+              "constraints": [
+                "NOT_NULL",
+                "UNIQUE"
+              ],
+              "type_params": "50"
+            },
+            {
+              "name": "total_amount",
+              "type": "DECIMAL",
+              "constraints": [
+                "NOT_NULL"
+              ],
+              "type_params": "10,2"
+            },
+            {
+              "name": "tax_amount",
+              "type": "DECIMAL",
+              "constraints": [],
+              "type_params": "10,2",
+              "default": "0"
+            },
+            {
+              "name": "shipping_amount",
+              "type": "DECIMAL",
+              "constraints": [],
+              "type_params": "10,2",
+              "default": "0"
+            },
+            {
+              "name": "discount_amount",
+              "type": "DECIMAL",
+              "constraints": [],
+              "type_params": "10,2",
+              "default": "0"
+            },
+            {
+              "name": "status",
+              "type": "ENUM('PENDING',",
+              "constraints": [],
+              "default": "'PENDING'"
+            },
+            {
+              "name": "payment_status",
+              "type": "ENUM('PENDING',",
+              "constraints": [],
+              "default": "'PENDING'"
+            },
+            {
+              "name": "shipping_address",
+              "type": "TEXT",
+              "constraints": []
+            },
+            {
+              "name": "billing_address",
+              "type": "TEXT",
+              "constraints": []
+            },
+            {
+              "name": "created_at",
+              "type": "TIMESTAMP",
+              "constraints": [],
+              "default": "CURRENT_TIMESTAMP"
+            },
+            {
+              "name": "updated_at",
+              "type": "TIMESTAMP",
+              "constraints": [],
+              "default": "CURRENT_TIMESTAMP"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "inventory",
+      "tables": [
+        {
+          "name": "warehouses",
+          "attributes": [
+            {
+              "name": "id",
+              "type": "INT",
+              "constraints": [
+                "AUTO_INCREMENT"
+              ]
+            },
+            {
+              "name": "name",
+              "type": "VARCHAR",
+              "constraints": [
+                "NOT_NULL"
+              ],
+              "type_params": "100"
+            },
+            {
+              "name": "code",
+              "type": "VARCHAR",
+              "constraints": [
+                "NOT_NULL",
+                "UNIQUE"
+              ],
+              "type_params": "20"
+            },
+            {
+              "name": "location",
+              "type": "VARCHAR",
+              "constraints": [],
+              "type_params": "200"
+            },
+            {
+              "name": "capacity",
+              "type": "INT",
+              "constraints": [],
+              "default": "0"
+            },
+            {
+              "name": "manager_name",
+              "type": "VARCHAR",
+              "constraints": [],
+              "type_params": "100"
+            },
+            {
+              "name": "contact_phone",
+              "type": "VARCHAR",
+              "constraints": [],
+              "type_params": "20"
+            },
+            {
+              "name": "is_active",
+              "type": "BOOLEAN",
+              "constraints": [],
+              "default": "TRUE"
+            },
+            {
+              "name": "created_at",
+              "type": "TIMESTAMP",
+              "constraints": [],
+              "default": "CURRENT_TIMESTAMP"
+            }
+          ]
+        },
+        {
+          "name": "inventory_items",
+          "attributes": [
+            {
+              "name": "id",
+              "type": "INT",
+              "constraints": [
+                "AUTO_INCREMENT"
+              ]
+            },
+            {
+              "name": "product_id",
+              "type": "INT",
+              "constraints": [
+                "NOT_NULL"
+              ]
+            },
+            {
+              "name": "warehouse_id",
+              "type": "INT",
+              "constraints": [
+                "NOT_NULL",
+                "FOREIGN_KEY_REFERENCES_warehouses.id"
+              ]
+            },
+            {
+              "name": "quantity",
+              "type": "INT",
+              "constraints": [
+                "NOT_NULL"
+              ],
+              "default": "0"
+            },
+            {
+              "name": "reserved_quantity",
+              "type": "INT",
+              "constraints": [],
+              "default": "0"
+            },
+            {
+              "name": "reorder_point",
+              "type": "INT",
+              "constraints": [],
+              "default": "0"
+            },
+            {
+              "name": "max_stock",
+              "type": "INT",
+              "constraints": []
+            },
+            {
+              "name": "last_updated",
+              "type": "TIMESTAMP",
+              "constraints": [],
+              "default": "CURRENT_TIMESTAMP"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
