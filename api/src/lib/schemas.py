@@ -1,6 +1,9 @@
-from pydantic import BaseModel, Field, ConfigDict
+# api/src/lib/schemas.py (Enhanced version)
+
+from pydantic import BaseModel, Field, ConfigDict, validator
 from typing import Dict, List, Optional, Any, Union
 from enum import Enum
+from datetime import datetime
 
 class ConstraintType(str, Enum):
     PRIMARY_KEY = "PRIMARY_KEY"
@@ -9,6 +12,7 @@ class ConstraintType(str, Enum):
     CHECK = "CHECK"
     NOT_NULL = "NOT_NULL"
     DEFAULT = "DEFAULT"
+    AUTO_INCREMENT = "AUTO_INCREMENT"
 
 class DataType(str, Enum):
     INTEGER = "INTEGER"
@@ -31,57 +35,7 @@ class DataType(str, Enum):
     UUID = "UUID"
     ENUM = "ENUM"
 
-class ColumnConstraint(BaseModel):
-    model_config = ConfigDict(str_strip_whitespace=True)
-    
-    type: ConstraintType
-    definition: str
-    referenced_table: Optional[str] = None
-    referenced_column: Optional[str] = None
-
-class ColumnAttribute(BaseModel):
-    model_config = ConfigDict(str_strip_whitespace=True)
-    
-    name: str
-    data_type: str
-    length: Optional[int] = None
-    precision: Optional[int] = None
-    scale: Optional[int] = None
-    nullable: bool = True
-    default_value: Optional[str] = None
-    auto_increment: bool = False
-    constraints: List[ColumnConstraint] = Field(default_factory=list)
-    enum_values: Optional[List[str]] = None
-    comment: Optional[str] = None
-
-class TableSchema(BaseModel):
-    model_config = ConfigDict(str_strip_whitespace=True)
-    
-    name: str
-    columns: Dict[str, ColumnAttribute]
-    primary_keys: List[str] = Field(default_factory=list)
-    foreign_keys: Dict[str, Dict[str, str]] = Field(default_factory=dict)
-    unique_constraints: List[List[str]] = Field(default_factory=list)
-    check_constraints: List[str] = Field(default_factory=list)
-    indexes: List[Dict[str, Any]] = Field(default_factory=list)
-    comment: Optional[str] = None
-
-class DatabaseSchema(BaseModel):
-    model_config = ConfigDict(str_strip_whitespace=True)
-    
-    name: str
-    tables: Dict[str, TableSchema]
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-
-class SchemaCollection(BaseModel):
-    model_config = ConfigDict(str_strip_whitespace=True)
-    
-    databases: Dict[str, DatabaseSchema]
-    version: str = "1.0"
-    generated_at: str
-    total_databases: int
-    total_tables: int
-
+# Schema Parser Schemas
 class ParseRequest(BaseModel):
     sql_content: str
     database_name: Optional[str] = None
@@ -91,8 +45,8 @@ class ParseResponse(BaseModel):
     schema_id: Optional[str] = None
     message: str
     processing_time: float
-    statistics: Dict[str, Any] = {}
-    data: str
+    statistics: Dict[str, Any] = Field(default_factory=dict)
+    data: Optional[str] = None
     file_path: Optional[str] = None
 
 class HealthResponse(BaseModel):
@@ -101,9 +55,142 @@ class HealthResponse(BaseModel):
     schemas_in_memory: int
     additional_info: Optional[Dict[str, Any]] = None
 
+# Synthetic Data Generation Schemas
+class SyntheticGenerationRequest(BaseModel):
+    schema_id: str
+    scale_factor: float = Field(default=2.0, ge=0.1, le=100.0)
+    num_rows: Optional[Dict[str, int]] = None
+    synthesizer_type: str = Field(default="HMA", regex="^(HMA|GAUSSIAN|CTGAN)$")
+    output_format: str = Field(default="csv", regex="^(csv|json|parquet)$")
+    seed: Optional[int] = None
+
+class SyntheticGenerationResponse(BaseModel):
+    success: bool
+    generation_id: Optional[str] = None
+    message: str
+    processing_time: float
+    statistics: Dict[str, Any] = Field(default_factory=dict)
+    file_paths: List[str] = Field(default_factory=list)
+    quality_score: Optional[float] = None
+
+# Seed Data Generation Schemas
+class SeedDataRequest(BaseModel):
+    schema_id: str
+    base_rows: int = Field(default=10, ge=1, le=10000)
+    locale: str = Field(default="en_US")
+    custom_generators: Optional[Dict[str, Dict[str, Any]]] = None
+    output_format: str = Field(default="csv", regex="^(csv|json)$")
+
+class SeedDataResponse(BaseModel):
+    success: bool
+    seed_id: Optional[str] = None
+    message: str
+    processing_time: float
+    statistics: Dict[str, Any] = Field(default_factory=dict)
+    file_paths: List[str] = Field(default_factory=list)
+
+# Data Evaluation Schemas
+class EvaluationRequest(BaseModel):
+    real_data_dir: str
+    synthetic_data_dir: str
+    evaluation_type: str = Field(default="comprehensive", regex="^(basic|comprehensive|advanced)$")
+    output_report: Optional[str] = None
+
+class EvaluationResponse(BaseModel):
+    success: bool
+    evaluation_id: Optional[str] = None
+    message: str
+    processing_time: float
+    overall_quality_score: Optional[float] = None
+    table_scores: Dict[str, float] = Field(default_factory=dict)
+    report_path: Optional[str] = None
+    summary: Dict[str, Any] = Field(default_factory=dict)
+
+# Data Pipeline Schemas
+class PipelineRequest(BaseModel):
+    schema_id: str
+    pipeline_name: str
+    steps: List[str] = Field(default=["seed_generation", "synthetic_generation", "evaluation"])
+    config: Dict[str, Any] = Field(default_factory=dict)
+
+class PipelineResponse(BaseModel):
+    success: bool
+    pipeline_id: Optional[str] = None
+    message: str
+    total_processing_time: float
+    step_results: List[Dict[str, Any]] = Field(default_factory=list)
+    final_outputs: Dict[str, Any] = Field(default_factory=dict)
+
+# File Management Schemas
+class FileInfo(BaseModel):
+    filename: str
+    file_path: str
+    file_size: int
+    created_at: datetime
+    content_hash: str
+    file_type: str
+
+class FileListResponse(BaseModel):
+    success: bool
+    files: List[FileInfo] = Field(default_factory=list)
+    total_files: int
+    total_size: int
+
+# Error Response Schema
 class ErrorResponse(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
     
     error: str
     details: Optional[str] = None
     code: int
+    timestamp: datetime = Field(default_factory=datetime.now)
+
+# Configuration Schemas
+class GeneratorConfig(BaseModel):
+    type: str
+    parameters: Dict[str, Any] = Field(default_factory=dict)
+    enabled: bool = True
+
+class QualityMetrics(BaseModel):
+    overall_score: float = Field(ge=0.0, le=1.0)
+    distribution_similarity: float = Field(ge=0.0, le=1.0)
+    correlation_preservation: float = Field(ge=0.0, le=1.0)
+    privacy_score: Optional[float] = Field(None, ge=0.0, le=1.0)
+
+# Batch Processing Schemas
+class BatchProcessRequest(BaseModel):
+    schema_ids: List[str]
+    operation_type: str = Field(regex="^(seed|synthetic|evaluate|pipeline)$")
+    config: Dict[str, Any] = Field(default_factory=dict)
+    parallel: bool = True
+    max_workers: int = Field(default=4, ge=1, le=10)
+
+class BatchProcessResponse(BaseModel):
+    success: bool
+    batch_id: str
+    message: str
+    total_jobs: int
+    successful_jobs: int
+    failed_jobs: int
+    job_results: List[Dict[str, Any]] = Field(default_factory=list)
+    processing_time: float
+
+# Statistics and Monitoring Schemas
+class SystemStats(BaseModel):
+    cpu_usage: float
+    memory_usage: float
+    disk_usage: float
+    active_jobs: int
+    completed_jobs: int
+    failed_jobs: int
+    uptime: float
+
+class JobStatus(BaseModel):
+    job_id: str
+    status: str = Field(regex="^(pending|running|completed|failed|cancelled)$")
+    created_at: datetime
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    progress: float = Field(default=0.0, ge=0.0, le=100.0)
+    message: Optional[str] = None
+    result: Optional[Dict[str, Any]] = None
