@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Optional, Any, Callable
 from enum import Enum
 from dataclasses import dataclass, field
@@ -44,13 +44,15 @@ class Job:
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert job to dictionary"""
+        started: Optional[str] = self.started_at.isoformat() if self.started_at is not None else None
+        completed: Optional[str] = self.completed_at.isoformat() if self.completed_at is not None else None
         return {
             "job_id": self.job_id,
             "job_type": self.job_type.value,
             "status": self.status.value,
             "created_at": self.created_at.isoformat(),
-            "started_at": self.started_at.isoformat() if self.started_at else None,
-            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+            "started_at": started,
+            "completed_at": completed,
             "progress": self.progress,
             "message": self.message,
             "parameters": self.parameters,
@@ -117,9 +119,9 @@ class JobManager:
                          job_id: str, 
                          status: JobStatus,
                          message: str = "",
-                         progress: float = None,
-                         result: Dict[str, Any] = None,
-                         error: str = None):
+                         progress: Optional[float] = None,
+                         result: Optional[Dict[str, Any]] = None,
+                         error: Optional[str] = None):
         """Update job status"""
         with self._lock:
             if job_id in self.jobs:
@@ -275,7 +277,7 @@ class JobManager:
         jobs.sort(key=lambda x: x.created_at, reverse=True)
         
         # Apply pagination
-        paginated_jobs = jobs[offset:offset + limit]
+        paginated_jobs: List[Job] = jobs[offset:offset + limit]
         
         return [job.to_dict() for job in paginated_jobs]
     
@@ -284,7 +286,7 @@ class JobManager:
         with self._lock:
             jobs = list(self.jobs.values())
         
-        stats = {
+        stats: Dict[str, Any] = {
             "total_jobs": len(jobs),
             "pending": len([j for j in jobs if j.status == JobStatus.PENDING]),
             "running": len([j for j in jobs if j.status == JobStatus.RUNNING]),
@@ -297,16 +299,16 @@ class JobManager:
         }
         
         # Add job type breakdown
-        job_types = {}
+        job_types: Dict[str, Dict[str, int]] = {}
         for job in jobs:
-            job_type = job.job_type.value
-            if job_type not in job_types:
-                job_types[job_type] = {"total": 0, "completed": 0, "failed": 0}
-            job_types[job_type]["total"] += 1
+            jt_value: str = job.job_type.value
+            if jt_value not in job_types:
+                job_types[jt_value] = {"total": 0, "completed": 0, "failed": 0}
+            job_types[jt_value]["total"] += 1
             if job.status == JobStatus.COMPLETED:
-                job_types[job_type]["completed"] += 1
+                job_types[jt_value]["completed"] += 1
             elif job.status == JobStatus.FAILED:
-                job_types[job_type]["failed"] += 1
+                job_types[jt_value]["failed"] += 1
         
         stats["job_types"] = job_types
         return stats
@@ -323,7 +325,7 @@ class JobManager:
             ]
             
             for job_id in old_jobs:
-                del self.jobs[job_id]
+                self.jobs.pop(job_id, None)
         
         logger.info(f"Cleaned up {len(old_jobs)} old jobs")
         return len(old_jobs)

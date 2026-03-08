@@ -12,8 +12,11 @@ from fastapi import APIRouter, HTTPException, Request, UploadFile, File, Query, 
 from fastapi.responses import JSONResponse
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-from src.lib.schemas import ParseResponse, HealthResponse, ParseRequest
+from src.lib.schemas import ParseResponse, HealthResponse, ParseRequest, SupabaseParseRequest, MongoDBParseRequest, Neo4jParseRequest
 from src.utils.schema_parse import SQLSchemaParser
+from src.utils.supabase_extractor import SupabaseExtractor
+from src.utils.mongodb_extractor import MongoDBExtractor
+from src.utils.neo4j_extractor import Neo4jExtractor
 from src.lib.database import insert_schema, check_schema_exists_by_hash
 
 # Configure logging
@@ -143,7 +146,7 @@ async def parse_sql_schema(
     
     try:
         # Read and validate file content
-        content = await file.read()
+        content: bytes = await file.read()
         
         # Check file size
         if len(content) > MAX_FILE_SIZE:
@@ -262,15 +265,14 @@ async def parse_sql_schema(
                 logger.warning(f"Failed to save schema to disk: {e}")
                 json_file_path = None
         
-        # Store schema in memory
         PARSED_SCHEMAS[schema_id] = schema_data
-        SCHEMA_COUNTER += 1
+
         
         processing_time = time.time() - start_time
         
         # Calculate enhanced statistics
         databases = schema.get("databases", [])
-        stats = {
+        stats: Dict[str, Any] = {
             "databases": len(databases),
             "tables": sum(len(db.get("tables", [])) for db in databases),
             "columns": sum(
@@ -285,7 +287,7 @@ async def parse_sql_schema(
         }
         
         # Add constraint statistics
-        constraint_counts = {}
+        constraint_counts: Dict[str, int] = {}
         for db in databases:
             for table in db.get("tables", []):
                 for attr in table.get("attributes", []):
@@ -334,6 +336,321 @@ async def parse_sql_schema(
             file_path=None
         )
 
+@router.post("/parse/supabase", response_model=ParseResponse)
+@limiter.limit("5/minute")
+async def parse_supabase_schema(
+    request: Request,
+    payload: SupabaseParseRequest
+) -> ParseResponse:
+    """
+    Connect to a Supabase database directly and extract its schema & RLS rules.
+    """
+    global SCHEMA_COUNTER
+    start_time = time.time()
+    
+    try:
+        extractor = SupabaseExtractor(payload.connection_string)
+        schema = extractor.extract_schema()
+        
+        # Validate parsed schema
+        if not schema_manager.validate_schema_content(schema):
+            raise ValueError("Invalid schema structure retrieved from Supabase")
+            
+        # Generate content hash for deduplication
+        schema_json_str = json.dumps(schema, sort_keys=True)
+        content_hash = schema_manager.generate_content_hash(schema_json_str)
+        schema_id = schema_manager.generate_schema_id(schema_json_str)
+        
+        # Check database duplicates
+        try:
+            db_duplicate_exists = check_schema_exists_by_hash(content_hash)
+            if db_duplicate_exists and not payload.overwrite_existing:
+                logger.info(f"Supabase schema with hash {content_hash} already exists")
+                return ParseResponse(
+                    success=True,
+                    schema_id=schema_id,
+                    message="Schema with identical structure already exists in database. Use overwrite_existing=true to reprocess.",
+                    processing_time=time.time() - start_time,
+                    statistics={
+                        "content_hash": content_hash,
+                        "duplicate": True,
+                        "duplicate_source": "database"
+                    },
+                    file_path=None
+                )
+        except Exception as db_error:
+            logger.warning(f"Could not check database for duplicates: {db_error}")
+
+        schema_manager.cleanup_old_schemas()
+        
+        content_bytes = schema_json_str.encode('utf-8')
+        
+        schema_data = {
+            "schema": schema,
+            "filename": "supabase_extracted_schema.json",
+            "created_at": time.time(),
+            "file_size": len(content_bytes),
+            "content_hash": content_hash,
+            "metadata": {
+                "upload_timestamp": datetime.now(timezone.utc).isoformat(),
+                "source": "supabase_extractor",
+                "connection": "**REDACTED**"
+            }
+        }
+        
+        json_file_path = None
+        
+        if payload.save_to_disk:
+            schemas_dir = Path("./schemas")
+            schemas_dir.mkdir(parents=True, exist_ok=True)
+            json_filename = f"schema_{content_hash}.json"
+            json_file_path = schemas_dir / json_filename
+            try:
+                with open(json_file_path, 'w', encoding='utf-8') as json_file:
+                    json.dump(schema, json_file, indent=2, ensure_ascii=False)
+                schema_data["file_path"] = str(json_file_path)
+            except Exception as e:
+                logger.warning(f"Failed to save Supabase schema to disk: {e}")
+        
+        PARSED_SCHEMAS[schema_id] = schema_data
+
+        
+        processing_time = time.time() - start_time
+        
+        databases = schema.get("databases", [])
+        stats = {
+            "databases": len(databases),
+            "tables": sum(len(db.get("tables", [])) for db in databases),
+            "columns": sum(
+                len(table.get("attributes", []))
+                for db in databases
+                for table in db.get("tables", [])
+            ),
+            "file_size": len(content_bytes),
+            "schema_id": schema_id,
+            "content_hash": content_hash,
+            "duplicate": False
+        }
+        
+        try:
+            insert_schema(
+                schema_data=schema,
+                filename="supabase_extracted_schema.json",
+                content_hash=content_hash,
+                file_size=len(content_bytes)
+            )
+        except Exception as db_error:
+            logger.error(f"Failed to insert schema into database: {db_error}")
+
+        return ParseResponse(
+            success=True,
+            schema_id=schema_id,
+            message=f"Supabase schema retrieved and stored successfully. Schema ID: {schema_id}",
+            processing_time=processing_time,
+            statistics=stats,
+            data=json.dumps(schema),
+            file_path=str(json_file_path) if json_file_path else None
+        )
+        
+    except Exception as e:
+        logger.error(f"Supabase schema extraction failed: {str(e)}")
+        return ParseResponse(
+            success=False,
+            schema_id=None,
+            message=f"Failed to extract schema from Supabase: {str(e)}",
+            processing_time=time.time() - start_time,
+            statistics={},
+            file_path=None
+        )
+
+# ─── MongoDB Parse Endpoint ───
+
+@router.post("/parse/mongodb", response_model=ParseResponse)
+@limiter.limit("10/minute")
+async def parse_mongodb_schema(request: Request, payload: MongoDBParseRequest):
+    """Extract schema from a MongoDB instance via connection string."""
+    start_time = time.time()
+    schema_manager = SchemaManager()
+
+    try:
+        logger.info("Starting MongoDB schema extraction")
+        extractor = MongoDBExtractor(
+            connection_string=payload.connection_string,
+            database_name=payload.database_name,
+        )
+        schema = extractor.extract_schema(sample_size=payload.sample_size)
+
+        schema_json_str = json.dumps(schema, default=str)
+        content_hash = schema_manager.generate_content_hash(schema_json_str)
+        schema_id = f"schema_{content_hash}"
+
+        if schema_id in PARSED_SCHEMAS and not payload.overwrite_existing:
+            return ParseResponse(
+                success=True, schema_id=schema_id,
+                message="Identical MongoDB schema already in memory.",
+                processing_time=time.time() - start_time,
+                statistics={"duplicate": True},
+                file_path=None,
+            )
+
+        schema_manager.cleanup_old_schemas()
+        content_bytes = schema_json_str.encode("utf-8")
+
+        schema_data: Dict[str, Any] = {
+            "schema": schema,
+            "filename": "mongodb_extracted_schema.json",
+            "created_at": time.time(),
+            "file_size": len(content_bytes),
+            "content_hash": content_hash,
+            "metadata": {
+                "upload_timestamp": datetime.now(timezone.utc).isoformat(),
+                "source": "mongodb_extractor",
+            },
+        }
+
+        json_file_path = None
+        if payload.save_to_disk:
+            schemas_dir = Path("./schemas")
+            schemas_dir.mkdir(parents=True, exist_ok=True)
+            json_file_path = schemas_dir / f"schema_{content_hash}.json"
+            try:
+                with open(json_file_path, "w", encoding="utf-8") as f:
+                    json.dump(schema, f, indent=2, ensure_ascii=False, default=str)
+                schema_data["file_path"] = str(json_file_path)
+            except Exception as e:
+                logger.warning(f"Failed to save MongoDB schema to disk: {e}")
+
+        PARSED_SCHEMAS[schema_id] = schema_data
+
+        databases = schema.get("databases", [])
+        stats: Dict[str, Any] = {
+            "databases": len(databases),
+            "collections": sum(len(db.get("tables", [])) for db in databases),
+            "fields": sum(
+                len(t.get("attributes", []))
+                for db in databases for t in db.get("tables", [])
+            ),
+            "schema_id": schema_id,
+            "content_hash": content_hash,
+            "duplicate": False,
+        }
+
+        return ParseResponse(
+            success=True, schema_id=schema_id,
+            message=f"MongoDB schema extracted successfully. Schema ID: {schema_id}",
+            processing_time=time.time() - start_time,
+            statistics=stats,
+            data=json.dumps(schema, default=str),
+            file_path=str(json_file_path) if json_file_path else None,
+        )
+
+    except Exception as e:
+        logger.error(f"MongoDB schema extraction failed: {e}")
+        return ParseResponse(
+            success=False, schema_id=None,
+            message=f"Failed to extract schema from MongoDB: {str(e)}",
+            processing_time=time.time() - start_time,
+            statistics={}, file_path=None,
+        )
+
+# ─── Neo4j Parse Endpoint ───
+
+@router.post("/parse/neo4j", response_model=ParseResponse)
+@limiter.limit("10/minute")
+async def parse_neo4j_schema(request: Request, payload: Neo4jParseRequest):
+    """Extract schema from a Neo4j instance.
+
+    Connects via the bolt protocol (default ``bolt://localhost:7687``).
+    The Neo4j browser is typically accessible at ``http://localhost:7474``.
+    """
+    start_time = time.time()
+    schema_manager = SchemaManager()
+
+    try:
+        logger.info(f"Starting Neo4j schema extraction from {payload.uri}")
+        extractor = Neo4jExtractor(
+            uri=payload.uri,
+            username=payload.username,
+            password=payload.password,
+            database=payload.database,
+        )
+        schema = extractor.extract_schema()
+
+        schema_json_str = json.dumps(schema, default=str)
+        content_hash = schema_manager.generate_content_hash(schema_json_str)
+        schema_id = f"schema_{content_hash}"
+
+        if schema_id in PARSED_SCHEMAS and not payload.overwrite_existing:
+            return ParseResponse(
+                success=True, schema_id=schema_id,
+                message="Identical Neo4j schema already in memory.",
+                processing_time=time.time() - start_time,
+                statistics={"duplicate": True},
+                file_path=None,
+            )
+
+        schema_manager.cleanup_old_schemas()
+        content_bytes = schema_json_str.encode("utf-8")
+
+        schema_data: Dict[str, Any] = {
+            "schema": schema,
+            "filename": "neo4j_extracted_schema.json",
+            "created_at": time.time(),
+            "file_size": len(content_bytes),
+            "content_hash": content_hash,
+            "metadata": {
+                "upload_timestamp": datetime.now(timezone.utc).isoformat(),
+                "source": "neo4j_extractor",
+                "neo4j_browser": schema.get("connection", {}).get("http_browser", "http://localhost:7474"),
+            },
+        }
+
+        json_file_path = None
+        if payload.save_to_disk:
+            schemas_dir = Path("./schemas")
+            schemas_dir.mkdir(parents=True, exist_ok=True)
+            json_file_path = schemas_dir / f"schema_{content_hash}.json"
+            try:
+                with open(json_file_path, "w", encoding="utf-8") as f:
+                    json.dump(schema, f, indent=2, ensure_ascii=False, default=str)
+                schema_data["file_path"] = str(json_file_path)
+            except Exception as e:
+                logger.warning(f"Failed to save Neo4j schema to disk: {e}")
+
+        PARSED_SCHEMAS[schema_id] = schema_data
+
+        databases = schema.get("databases", [])
+        nodes = [t for db in databases for t in db.get("tables", []) if t.get("node_type") == "node"]
+        rels = [t for db in databases for t in db.get("tables", []) if t.get("node_type") == "relationship"]
+
+        stats: Dict[str, Any] = {
+            "node_labels": len(nodes),
+            "relationship_types": len(rels),
+            "properties": sum(len(t.get("attributes", [])) for t in nodes + rels),
+            "schema_id": schema_id,
+            "content_hash": content_hash,
+            "neo4j_browser": schema.get("connection", {}).get("http_browser", "http://localhost:7474"),
+            "duplicate": False,
+        }
+
+        return ParseResponse(
+            success=True, schema_id=schema_id,
+            message=f"Neo4j schema extracted successfully. Schema ID: {schema_id}",
+            processing_time=time.time() - start_time,
+            statistics=stats,
+            data=json.dumps(schema, default=str),
+            file_path=str(json_file_path) if json_file_path else None,
+        )
+
+    except Exception as e:
+        logger.error(f"Neo4j schema extraction failed: {e}")
+        return ParseResponse(
+            success=False, schema_id=None,
+            message=f"Failed to extract schema from Neo4j: {str(e)}",
+            processing_time=time.time() - start_time,
+            statistics={}, file_path=None,
+        )
+
 @router.get("/schemas")
 @limiter.limit("50/minute")
 async def list_schemas(
@@ -371,7 +688,7 @@ async def list_schemas(
         sorted_items = list(filtered_schemas.items())
     
     # Apply pagination
-    paginated_items = sorted_items[offset:offset + limit]
+    paginated_items: List[Any] = sorted_items[offset:offset + limit]
     
     schema_list = []
     for schema_id, schema_data in paginated_items:
@@ -574,11 +891,11 @@ async def get_table_details(request: Request, schema_id: str, table_name: str):
         )
     
     # Analyze table structure
-    attributes = found_table.get("attributes", [])
-    primary_keys = [attr["name"] for attr in attributes if "PRIMARY_KEY" in attr.get("constraints", [])]
-    foreign_keys = []
-    unique_columns = [attr["name"] for attr in attributes if "UNIQUE" in attr.get("constraints", [])]
-    nullable_columns = [attr["name"] for attr in attributes if "NOT_NULL" not in attr.get("constraints", [])]
+    attributes: List[Dict[str, Any]] = found_table.get("attributes", []) if found_table else []
+    primary_keys: List[str] = [attr["name"] for attr in attributes if "PRIMARY_KEY" in attr.get("constraints", [])]
+    foreign_keys: List[Dict[str, str]] = []
+    unique_columns: List[str] = [attr["name"] for attr in attributes if "UNIQUE" in attr.get("constraints", [])]
+    nullable_columns: List[str] = [attr["name"] for attr in attributes if "NOT_NULL" not in attr.get("constraints", [])]
     
     for attr in attributes:
         for constraint in attr.get("constraints", []):
@@ -608,11 +925,11 @@ async def get_table_details(request: Request, schema_id: str, table_name: str):
 # Enhanced utility functions with better error handling and logging
 
 def get_schema_by_id(schema_id: str) -> Optional[Dict[str, Any]]:
-    """Get schema by ID with logging"""
+    """Get schema data by ID with logging. Returns the full schema data dict including 'schema', 'filename', etc."""
     schema_data = PARSED_SCHEMAS.get(schema_id)
     if schema_data:
         logger.debug(f"Retrieved schema: {schema_id}")
-        return schema_data["schema"]
+        return schema_data
     else:
         logger.warning(f"Schema not found: {schema_id}")
         return None
@@ -683,12 +1000,12 @@ def get_schema_statistics() -> Dict[str, Any]:
             "total_storage_bytes": 0
         }
     
-    total_databases = 0
-    total_tables = 0
-    total_attributes = 0
-    total_storage = 0
-    constraint_stats = {}
-    data_type_stats = {}
+    total_databases: int = 0
+    total_tables: int = 0
+    total_attributes: int = 0
+    total_storage: int = 0
+    constraint_stats: Dict[str, int] = {}
+    data_type_stats: Dict[str, int] = {}
     
     for schema_data in PARSED_SCHEMAS.values():
         schema = schema_data["schema"]

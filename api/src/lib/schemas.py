@@ -40,6 +40,26 @@ class ParseRequest(BaseModel):
     sql_content: str
     database_name: Optional[str] = None
 
+class SupabaseParseRequest(BaseModel):
+    connection_string: str
+    save_to_disk: bool = True
+    overwrite_existing: bool = False
+
+class MongoDBParseRequest(BaseModel):
+    connection_string: str
+    database_name: Optional[str] = None
+    sample_size: int = Field(default=100, ge=1, le=10000)
+    save_to_disk: bool = True
+    overwrite_existing: bool = False
+
+class Neo4jParseRequest(BaseModel):
+    uri: str = Field(default="bolt://localhost:7687")
+    username: str = Field(default="neo4j")
+    password: str = Field(default="")
+    database: Optional[str] = None
+    save_to_disk: bool = True
+    overwrite_existing: bool = False
+
 class ParseResponse(BaseModel):
     success: bool
     schema_id: Optional[str] = None
@@ -60,8 +80,8 @@ class SyntheticGenerationRequest(BaseModel):
     schema_id: str
     scale_factor: float = Field(default=2.0, ge=0.1, le=100.0)
     num_rows: Optional[Dict[str, int]] = None
-    synthesizer_type: str = Field(default="HMA", regex="^(HMA|GAUSSIAN|CTGAN)$")
-    output_format: str = Field(default="csv", regex="^(csv|json|parquet)$")
+    synthesizer_type: str = Field(default="HMA", pattern="^(HMA|GAUSSIAN|CTGAN)$")
+    output_format: str = Field(default="csv", pattern="^(csv|json|parquet)$")
     seed: Optional[int] = None
 
 class SyntheticGenerationResponse(BaseModel):
@@ -79,7 +99,7 @@ class SeedDataRequest(BaseModel):
     base_rows: int = Field(default=10, ge=1, le=10000)
     locale: str = Field(default="en_US")
     custom_generators: Optional[Dict[str, Dict[str, Any]]] = None
-    output_format: str = Field(default="csv", regex="^(csv|json)$")
+    output_format: str = Field(default="csv", pattern="^(csv|json)$")
 
 class SeedDataResponse(BaseModel):
     success: bool
@@ -93,7 +113,7 @@ class SeedDataResponse(BaseModel):
 class EvaluationRequest(BaseModel):
     real_data_dir: str
     synthetic_data_dir: str
-    evaluation_type: str = Field(default="comprehensive", regex="^(basic|comprehensive|advanced)$")
+    evaluation_type: str = Field(default="comprehensive", pattern="^(basic|comprehensive|advanced)$")
     output_report: Optional[str] = None
 
 class EvaluationResponse(BaseModel):
@@ -160,7 +180,7 @@ class QualityMetrics(BaseModel):
 # Batch Processing Schemas
 class BatchProcessRequest(BaseModel):
     schema_ids: List[str]
-    operation_type: str = Field(regex="^(seed|synthetic|evaluate|pipeline)$")
+    operation_type: str = Field(pattern="^(seed|synthetic|evaluate|pipeline)$")
     config: Dict[str, Any] = Field(default_factory=dict)
     parallel: bool = True
     max_workers: int = Field(default=4, ge=1, le=10)
@@ -187,7 +207,7 @@ class SystemStats(BaseModel):
 
 class JobStatus(BaseModel):
     job_id: str
-    status: str = Field(regex="^(pending|running|completed|failed|cancelled)$")
+    status: str = Field(pattern="^(pending|running|completed|failed|cancelled)$")
     created_at: datetime
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None

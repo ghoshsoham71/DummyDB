@@ -56,7 +56,7 @@ def synthetic_generation_handler(parameters: Dict[str, Any],
             progress_callback(20, "Initializing SDV generator...")
         
         # Import SDV generator
-        from sdv_synthetic_generator import SDVSyntheticGenerator
+        from src.utils.sdv_synthetic_generator import SDVSyntheticGenerator
         
         # Initialize generator
         generator = SDVSyntheticGenerator(schema_data["schema"])
@@ -346,7 +346,7 @@ async def get_generation_templates(request: Request):
 async def batch_generate_synthetic_data(
     request: Request,
     schema_ids: List[str],
-    config: Dict[str, Any] = None
+    config: Optional[Dict[str, Any]] = None
 ):
     """Generate synthetic data for multiple schemas"""
     try:

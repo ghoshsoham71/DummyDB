@@ -7,6 +7,8 @@ from slowapi.util import get_remote_address
 
 # Import your routers
 from src.routers import schema_parse_router, migration_router
+from src.routers.synthetic_router import router as synthetic_router
+from src.routers.dashboard_router import router as dashboard_router
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -74,6 +76,8 @@ app.add_middleware(
 # Include routers
 app.include_router(schema_parse_router, prefix="/api/v1")
 app.include_router(migration_router, prefix="/api/v1")
+app.include_router(synthetic_router, prefix="/api/v1")
+app.include_router(dashboard_router, prefix="/api/v1")
 
 @app.get("/")
 async def root():
