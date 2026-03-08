@@ -1,15 +1,15 @@
----
-sidebarTitle: MongoDB (NoSQL) 🍃
+﻿---
+sidebarTitle: MongoDB (NoSQL) ðŸƒ
 ---
 
 # MongoDB (NoSQL)
 
-DummyDB can connect to MongoDB instances, sample documents, and infer the schema automatically.
+BurstDB can connect to MongoDB instances, sample documents, and infer the schema automatically.
 
 ## How It Works
 
 1. Connect via a MongoDB connection string
-2. DummyDB samples documents from each collection (configurable, default: 100)
+2. BurstDB samples documents from each collection (configurable, default: 100)
 3. Field types are inferred from the sampled values
 4. Indexes and validation rules are extracted
 5. The schema is normalized to match the same format as SQL schemas
@@ -20,7 +20,7 @@ In the **Get Started** page, select **MongoDB (NoSQL)** and provide:
 
 | Field | Example | Required |
 |-------|---------|----------|
-| Connection String | `mongodb://localhost:27017` | ✅ |
+| Connection String | `mongodb://localhost:27017` | âœ… |
 | Database Name | `myApp` | Optional (scans all if blank) |
 
 ### Connection String Formats
@@ -50,7 +50,7 @@ mongodb+srv://user:password@cluster.mongodb.net/myDatabase
 
 ## Type Mapping
 
-| BSON Type | DummyDB Type |
+| BSON Type | BurstDB Type |
 |-----------|-------------|
 | String | VARCHAR |
 | Int32 / Int64 | INTEGER |
@@ -65,7 +65,7 @@ mongodb+srv://user:password@cluster.mongodb.net/myDatabase
 
 ## Limitations
 
-- Schema inference is based on sampling — rare fields may be missed
+- Schema inference is based on sampling â€” rare fields may be missed
 - Maximum nesting depth is 3 levels
 - System collections (`system.*`) are skipped
 - `admin`, `local`, and `config` databases are excluded

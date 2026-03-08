@@ -1,10 +1,10 @@
----
+﻿---
 sidebarTitle: Synthetic Data
 ---
 
 # Synthetic Data Generation
 
-After parsing a schema, DummyDB generates realistic synthetic data using the **SDV (Synthetic Data Vault)** library.
+After parsing a schema, BurstDB generates realistic synthetic data using the **SDV (Synthetic Data Vault)** library.
 
 ## Synthesizer Types
 
@@ -16,7 +16,7 @@ After parsing a schema, DummyDB generates realistic synthetic data using the **S
 
 ## Generation Templates
 
-DummyDB provides pre-configured templates:
+BurstDB provides pre-configured templates:
 
 | Template | Scale | Synthesizer | Use Case |
 |----------|-------|-------------|----------|
@@ -63,13 +63,13 @@ Optionally encrypt specific columns in the output:
 Completed jobs produce a ZIP file containing all generated data. Download via:
 
 - The **Generate** page after completion
-- The **Dashboard → Jobs** tab
+- The **Dashboard â†’ Jobs** tab
 - Direct URL: `GET /api/v1/synthetic/download/{generation_id}`
 
 ## Quality Metrics
 
-DummyDB evaluates synthetic data quality:
+BurstDB evaluates synthetic data quality:
 
-- **Column Shapes** — distribution similarity
-- **Column Pair Trends** — correlation preservation
-- **Overall Quality Score** — 0 to 1 composite score
+- **Column Shapes** â€” distribution similarity
+- **Column Pair Trends** â€” correlation preservation
+- **Overall Quality Score** â€” 0 to 1 composite score

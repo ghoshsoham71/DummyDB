@@ -1,10 +1,10 @@
----
+﻿---
 sidebarTitle: Overview
 ---
 
-# DummyDB Documentation
+# BurstDB Documentation
 
-**DummyDB** is a synthetic data generation pipeline that parses database schemas and produces realistic mock data using machine learning models (SDV).
+**BurstDB** is a synthetic data generation pipeline that parses database schemas and produces realistic mock data using machine learning models (SDV).
 
 ## Supported Databases
 
@@ -18,22 +18,22 @@ sidebarTitle: Overview
 ## Architecture
 
 ```
-┌──────────────┐     ┌──────────────┐     ┌─────────────────┐
-│   Next.js    │────▶│   FastAPI     │────▶│  SDV / CTGAN    │
-│   Frontend   │◀────│   Backend     │◀────│  HMA Synthesizer│
-└──────────────┘     └───────┬──────┘     └─────────────────┘
-                             │
-                   ┌─────────┼──────────┐
-                   │         │          │
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”     â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”     â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚   Next.js    â”‚â”€â”€â”€â”€â–¶â”‚   FastAPI     â”‚â”€â”€â”€â”€â–¶â”‚  SDV / CTGAN    â”‚
+â”‚   Frontend   â”‚â—€â”€â”€â”€â”€â”‚   Backend     â”‚â—€â”€â”€â”€â”€â”‚  HMA Synthesizerâ”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜     â””â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”˜     â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+                             â”‚
+                   â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+                   â”‚         â”‚          â”‚
               Supabase   MongoDB     Neo4j
 ```
 
 ## Quick Links
 
-- [Getting Started](/docs/getting-started) — install and run locally
-- [SQL Databases](/docs/sql-databases) — SQL file upload and Supabase
-- [MongoDB](/docs/nosql-databases) — NoSQL document database
-- [Neo4j](/docs/graph-databases) — Graph database with Cypher
-- [Synthetic Data](/docs/synthetic-data) — Generation templates and download
-- [Dashboard](/docs/dashboard) — Manage schemas, jobs, and stats
-- [API Reference](/docs/api-reference) — All REST endpoints
+- [Getting Started](/docs/getting-started) â€” install and run locally
+- [SQL Databases](/docs/sql-databases) â€” SQL file upload and Supabase
+- [MongoDB](/docs/nosql-databases) â€” NoSQL document database
+- [Neo4j](/docs/graph-databases) â€” Graph database with Cypher
+- [Synthetic Data](/docs/synthetic-data) â€” Generation templates and download
+- [Dashboard](/docs/dashboard) â€” Manage schemas, jobs, and stats
+- [API Reference](/docs/api-reference) â€” All REST endpoints

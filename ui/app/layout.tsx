@@ -9,7 +9,7 @@ import { Footer } from "@/components/Footer";
 import { ModeToggle } from "@/components/ModeToggle";
 import "nextra-theme-docs/style.css";
 export const metadata: Metadata = {
-  title: "DummyDB",
+  title: "BurstDB",
   description: "Testing",
 };
 
@@ -25,8 +25,8 @@ const geistMono = Geist_Mono({
 
 const navbar = (
   <Navbar
-    logo={<b>DummyDB</b>}
-    projectLink="https://github.com/ghoshsoham71/DummyDB"
+    logo={<b>BurstDB</b>}
+    projectLink="https://github.com/ghoshsoham71/BurstDB"
   >
     <ModeToggle />
   </Navbar>
@@ -64,7 +64,7 @@ export default async function RootLayout({
           <Layout
             navbar={navbar}
             pageMap={await getPageMap()}
-            docsRepositoryBase="https://github.com/ghoshsoham71/DummyDB/tree/main/ui"
+            docsRepositoryBase="https://github.com/ghoshsoham71/BurstDB/tree/main/ui"
             footer={footer}
             // editLink={null}
             feedback={feedback}

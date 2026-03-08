@@ -1,10 +1,10 @@
----
-sidebarTitle: Neo4j (Graph) 🔗
+﻿---
+sidebarTitle: Neo4j (Graph) ðŸ”—
 ---
 
 # Neo4j (Graph Database)
 
-DummyDB connects to Neo4j via the Bolt protocol and extracts the graph schema — node labels, relationship types, properties, and constraints.
+BurstDB connects to Neo4j via the Bolt protocol and extracts the graph schema â€” node labels, relationship types, properties, and constraints.
 
 ## Ports
 
@@ -13,7 +13,7 @@ Neo4j uses two ports on the user's system:
 | Port | Protocol | Purpose |
 |------|----------|---------|
 | **7474** | HTTP | Neo4j Browser (web UI) |
-| **7687** | Bolt | Driver connections (used by DummyDB) |
+| **7687** | Bolt | Driver connections (used by BurstDB) |
 
 You can access the Neo4j Browser directly at `http://localhost:7474`.
 
@@ -32,18 +32,18 @@ In the **Get Started** page, select **Neo4j (Graph DB)** and provide:
 
 ### Nodes (mapped as tables with prefix `Node:`)
 
-- **Labels** — each unique label becomes a "table" entry
-- **Properties** — field names and types (via APOC or fallback)
-- **Constraints** — UNIQUE, NOT_NULL from `SHOW CONSTRAINTS`
-- **Node count** — total nodes per label
-- **Outgoing relationships** — relationship type and target label
+- **Labels** â€” each unique label becomes a "table" entry
+- **Properties** â€” field names and types (via APOC or fallback)
+- **Constraints** â€” UNIQUE, NOT_NULL from `SHOW CONSTRAINTS`
+- **Node count** â€” total nodes per label
+- **Outgoing relationships** â€” relationship type and target label
 
 ### Relationships (mapped as tables with prefix `Rel:`)
 
-- **Type** — relationship type name
-- **Properties** — any properties on the relationship
-- **Source → Target** — label pairs
-- **Count** — total relationships of this type
+- **Type** â€” relationship type name
+- **Properties** â€” any properties on the relationship
+- **Source â†’ Target** â€” label pairs
+- **Count** â€” total relationships of this type
 
 ## Example
 
@@ -57,7 +57,7 @@ CREATE (a)-[:WORKS_AT {since: 2020}]->(c)
 CREATE (a)-[:KNOWS]->(b)
 ```
 
-DummyDB extracts:
+BurstDB extracts:
 
 | Table | Type | Properties |
 |-------|------|------------|
@@ -68,7 +68,7 @@ DummyDB extracts:
 
 ## Type Mapping
 
-| Neo4j Type | DummyDB Type |
+| Neo4j Type | BurstDB Type |
 |------------|-------------|
 | STRING | VARCHAR |
 | INTEGER / LONG | INTEGER / BIGINT |
@@ -83,7 +83,7 @@ DummyDB extracts:
 
 ## APOC Plugin
 
-If [APOC](https://neo4j.com/labs/apoc/) is installed, DummyDB uses `apoc.meta.cypher.type()` for precise type inference. Without APOC, types default to VARCHAR using a simpler fallback.
+If [APOC](https://neo4j.com/labs/apoc/) is installed, BurstDB uses `apoc.meta.cypher.type()` for precise type inference. Without APOC, types default to VARCHAR using a simpler fallback.
 
 ## Docker Quick Start
 
@@ -96,7 +96,7 @@ docker run -d \
   neo4j:latest
 ```
 
-Then connect in DummyDB with:
+Then connect in BurstDB with:
 - URI: `bolt://localhost:7687`
 - Username: `neo4j`
 - Password: `password`
