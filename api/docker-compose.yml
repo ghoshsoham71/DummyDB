@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  sql-schema-parser:
+  burstdb-api:
     build: .
     ports:
       - "8000:8000"
@@ -24,7 +24,7 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
     depends_on:
-      - sql-schema-parser
+      - burstdb-api
     restart: unless-stopped
     profiles:
       - production

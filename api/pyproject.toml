@@ -1,7 +1,7 @@
 [project]
-name = "api"
-version = "0.1.0"
-description = "Add your description here"
+name = "burstdb-api"
+version = "2.0.0"
+description = "BurstDB — synthetic data generation API for SQL, MongoDB, and Neo4j"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [

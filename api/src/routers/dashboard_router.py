@@ -1,6 +1,6 @@
 """
 Dashboard Router
-Aggregated analytics and activity endpoints for the DummyDB dashboard.
+Aggregated analytics and activity endpoints for the BurstDB dashboard.
 """
 import logging
 import time
@@ -14,9 +14,7 @@ from slowapi.util import get_remote_address
 
 from src.utils.job_manager import job_manager, JobType
 from src.utils.file_manager import file_manager
-
-# Re-use the in-memory schema store from schema_parse_router
-from src.routers.schema_parse_router import PARSED_SCHEMAS
+from src.services.schema_store import PARSED_SCHEMAS
 
 logger = logging.getLogger(__name__)
 
