@@ -1,3 +1,39 @@
-# Welcome to Nextra
- 
-Hello, world!
+---
+sidebarTitle: Overview
+---
+
+# DummyDB Documentation
+
+**DummyDB** is a synthetic data generation pipeline that parses database schemas and produces realistic mock data using machine learning models (SDV).
+
+## Supported Databases
+
+| Type | Source | How |
+|------|--------|-----|
+| **SQL** | `.sql` file upload | Upload a `CREATE TABLE` dump |
+| **PostgreSQL** | Supabase | Provide a Supabase connection string |
+| **NoSQL** | MongoDB | Connect via `mongodb://` URI |
+| **Graph** | Neo4j | Connect via `bolt://localhost:7687` |
+
+## Architecture
+
+```
+┌──────────────┐     ┌──────────────┐     ┌─────────────────┐
+│   Next.js    │────▶│   FastAPI     │────▶│  SDV / CTGAN    │
+│   Frontend   │◀────│   Backend     │◀────│  HMA Synthesizer│
+└──────────────┘     └───────┬──────┘     └─────────────────┘
+                             │
+                   ┌─────────┼──────────┐
+                   │         │          │
+              Supabase   MongoDB     Neo4j
+```
+
+## Quick Links
+
+- [Getting Started](/docs/getting-started) — install and run locally
+- [SQL Databases](/docs/sql-databases) — SQL file upload and Supabase
+- [MongoDB](/docs/nosql-databases) — NoSQL document database
+- [Neo4j](/docs/graph-databases) — Graph database with Cypher
+- [Synthetic Data](/docs/synthetic-data) — Generation templates and download
+- [Dashboard](/docs/dashboard) — Manage schemas, jobs, and stats
+- [API Reference](/docs/api-reference) — All REST endpoints

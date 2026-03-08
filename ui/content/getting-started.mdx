@@ -1,0 +1,71 @@
+---
+sidebarTitle: Getting Started 🚀
+---
+
+# Getting Started
+
+Follow these steps to run DummyDB locally.
+
+## Prerequisites
+
+- **Python 3.13+** — backend
+- **Node.js 18+** — frontend
+- **uv** — Python package manager (recommended)
+
+## 1. Clone the Repository
+
+```bash
+git clone https://github.com/your-org/DummyDB.git
+cd DummyDB
+```
+
+## 2. Start the Backend
+
+```bash
+cd api
+uv run uvicorn main:app --reload
+```
+
+The API will be available at `http://localhost:8000`. Interactive docs are at `http://localhost:8000/docs`.
+
+## 3. Start the Frontend
+
+```bash
+cd ui
+npm install
+npm run dev
+```
+
+Visit `http://localhost:3000` to access the UI.
+
+## 4. Environment Variables
+
+Create a `.env` file in the `api/` directory:
+
+```env
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+```
+
+For MongoDB and Neo4j, connection details are provided directly in the UI.
+
+## Optional: Neo4j Setup
+
+If you want to use Neo4j:
+
+1. Download [Neo4j Desktop](https://neo4j.com/download/) or run via Docker:
+   ```bash
+   docker run -d -p 7474:7474 -p 7687:7687 neo4j:latest
+   ```
+2. Access the Neo4j Browser at `http://localhost:7474`
+3. The Bolt protocol runs on port `7687`
+
+## Optional: MongoDB Setup
+
+If using MongoDB:
+
+1. Install [MongoDB Community](https://www.mongodb.com/try/download/community) or run via Docker:
+   ```bash
+   docker run -d -p 27017:27017 mongo:latest
+   ```
+2. Connection string: `mongodb://localhost:27017`

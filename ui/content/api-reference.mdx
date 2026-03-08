@@ -1,0 +1,145 @@
+---
+sidebarTitle: API Reference 📡
+---
+
+# API Reference
+
+Base URL: `http://localhost:8000/api/v1`
+
+Interactive Swagger docs: `http://localhost:8000/docs`
+
+## Schema Parsing
+
+### Parse SQL File
+
+```
+POST /parse
+Content-Type: multipart/form-data
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `file` | File | SQL file with CREATE TABLE statements |
+| `seed_data_file` | File | Optional seed data (CSV/SQL) |
+| `save_to_disk` | bool | Save schema JSON to disk (default: true) |
+
+### Parse Supabase
+
+```
+POST /parse/supabase
+Content-Type: application/json
+```
+
+```json
+{
+  "connection_string": "postgresql://...",
+  "save_to_disk": true,
+  "overwrite_existing": false
+}
+```
+
+### Parse MongoDB
+
+```
+POST /parse/mongodb
+Content-Type: application/json
+```
+
+```json
+{
+  "connection_string": "mongodb://localhost:27017",
+  "database_name": "myDb",
+  "sample_size": 100,
+  "save_to_disk": true
+}
+```
+
+### Parse Neo4j
+
+```
+POST /parse/neo4j
+Content-Type: application/json
+```
+
+```json
+{
+  "uri": "bolt://localhost:7687",
+  "username": "neo4j",
+  "password": "password",
+  "database": null,
+  "save_to_disk": true
+}
+```
+
+---
+
+## Schema Management
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/schemas` | List all schemas |
+| `GET` | `/schemas/{id}` | Get schema details |
+| `DELETE` | `/schemas/{id}` | Delete schema |
+| `POST` | `/schemas/bulk-delete` | Bulk delete schemas |
+| `GET` | `/schemas/{id}/tables/{table}` | Get table details |
+
+---
+
+## Synthetic Data
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/synthetic/generate` | Start generation |
+| `GET` | `/synthetic/jobs` | List all jobs |
+| `GET` | `/synthetic/jobs/{id}/status` | Job status |
+| `DELETE` | `/synthetic/jobs/{id}` | Cancel job |
+| `GET` | `/synthetic/download/{id}` | Download results (ZIP) |
+| `GET` | `/synthetic/templates` | List templates |
+| `GET` | `/synthetic/stats` | System statistics |
+
+### Generate Payload
+
+```json
+{
+  "schema_id": "schema_abc123",
+  "scale_factor": 2.0,
+  "num_rows": { "users": 1000, "orders": 5000 },
+  "synthesizer_type": "HMA",
+  "output_format": "csv",
+  "seed": 42
+}
+```
+
+---
+
+## Dashboard
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/dashboard/overview` | Aggregated stats |
+| `GET` | `/dashboard/activity` | Recent activity timeline |
+| `GET` | `/dashboard/schema-stats` | Per-schema analytics |
+
+---
+
+## Health
+
+```
+GET /health
+```
+
+Returns system health status, including schema count and API version.
+
+---
+
+## Rate Limits
+
+All endpoints are rate-limited via SlowAPI:
+
+| Endpoint Group | Limit |
+|---------------|-------|
+| Parse | 10/minute |
+| Generate | 5/minute |
+| List/Status | 50–100/minute |
+| Dashboard | 60/minute |
+| Health | 100/minute |

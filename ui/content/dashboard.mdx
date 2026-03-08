@@ -1,0 +1,66 @@
+---
+sidebarTitle: Dashboard
+---
+
+# Dashboard
+
+The Dashboard provides a central view of all your schemas, jobs, and system statistics.
+
+## Overview Tab
+
+The overview shows at a glance:
+
+- **Total Schemas** — parsed schemas in memory
+- **Total Tables** — across all schemas
+- **Synthetic Files** — generated data files
+- **Storage** — disk size of generated data
+
+### Schemas by Source
+
+A breakdown of how many schemas came from each source:
+
+- SQL file upload
+- Supabase
+- MongoDB
+- Neo4j
+
+### Activity Timeline
+
+A chronological feed of recent events:
+- Schema parsed
+- Job started / completed / failed / cancelled
+
+## Schemas Tab
+
+Manage all parsed schemas:
+
+| Action | Description |
+|--------|-------------|
+| **Search** | Filter schemas by filename |
+| **Select** | Checkbox selection for bulk operations |
+| **Delete** | Remove individual schemas |
+| **Bulk Delete** | Remove multiple selected schemas |
+
+Each schema entry shows:
+- Filename or schema ID
+- Number of tables
+- File size
+- Age (time since creation)
+
+## Jobs Tab
+
+Monitor all synthetic data generation jobs:
+
+| Status | Description |
+|--------|-------------|
+| 🟡 Pending | Job queued, waiting to start |
+| 🔵 Running | Job actively generating data |
+| 🟢 Completed | Data ready for download |
+| 🔴 Failed | Job encountered an error |
+| ⚪ Cancelled | Job cancelled by user |
+
+### Actions
+
+- **Download** — available on completed jobs
+- **Cancel** — available on pending/running jobs
+- **Progress bar** — shows generation progress

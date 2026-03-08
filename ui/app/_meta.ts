@@ -8,6 +8,10 @@ const meta = {
     type: "page",
     title: "Get Started",
   },
+  dashboard: {
+    type: "page",
+    title: "Dashboard",
+  },
   docs: {
     type: "page",
   },

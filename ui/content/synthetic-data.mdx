@@ -1,0 +1,75 @@
+---
+sidebarTitle: Synthetic Data
+---
+
+# Synthetic Data Generation
+
+After parsing a schema, DummyDB generates realistic synthetic data using the **SDV (Synthetic Data Vault)** library.
+
+## Synthesizer Types
+
+| Type | Description | Best For |
+|------|-------------|----------|
+| **HMA** | Hierarchical / Multi-table Aware | Schemas with foreign keys |
+| **CTGAN** | Conditional GAN-based | Single tables, complex distributions |
+| **GAUSSIAN** | Gaussian Copula | Fast generation, simple schemas |
+
+## Generation Templates
+
+DummyDB provides pre-configured templates:
+
+| Template | Scale | Synthesizer | Use Case |
+|----------|-------|-------------|----------|
+| Quick | 1.0x | GAUSSIAN | Rapid prototyping |
+| Balanced | 2.0x | HMA | General development |
+| High Quality | 5.0x | CTGAN | Production-like testing |
+
+Select a template in the **Configure** step, or set custom parameters per table.
+
+## Configuration Options
+
+### Per-Table Row Count
+
+Set the exact number of synthetic rows to generate for each table:
+
+```
+users:     1000
+orders:    5000
+products:  200
+```
+
+### Encryption
+
+Optionally encrypt specific columns in the output:
+
+| Algorithm | Key Size | Speed |
+|-----------|----------|-------|
+| AES-256 | 256-bit | Fast |
+| AES-128 | 128-bit | Fast |
+| RSA-2048 | 2048-bit | Slow |
+| RSA-4096 | 4096-bit | Slow |
+| ChaCha20 | 256-bit | Fast |
+
+## Output Formats
+
+| Format | Description |
+|--------|-------------|
+| CSV | Default, one file per table |
+| JSON | JSON records per table |
+| Parquet | Columnar format |
+
+## Downloading
+
+Completed jobs produce a ZIP file containing all generated data. Download via:
+
+- The **Generate** page after completion
+- The **Dashboard → Jobs** tab
+- Direct URL: `GET /api/v1/synthetic/download/{generation_id}`
+
+## Quality Metrics
+
+DummyDB evaluates synthetic data quality:
+
+- **Column Shapes** — distribution similarity
+- **Column Pair Trends** — correlation preservation
+- **Overall Quality Score** — 0 to 1 composite score

@@ -1,0 +1,63 @@
+---
+sidebarTitle: SQL Databases
+---
+
+# SQL Databases
+
+DummyDB supports two ways to parse SQL schemas:
+
+## SQL File Upload
+
+Upload a `.sql` file containing `CREATE TABLE` statements. The parser extracts:
+
+- Table and column names
+- Data types (mapped to standard types)
+- Constraints (PRIMARY KEY, FOREIGN KEY, UNIQUE, NOT NULL, CHECK, DEFAULT)
+- Indexes
+- Auto-increment / sequences
+
+### Supported Dialects
+
+| Dialect | Status |
+|---------|--------|
+| PostgreSQL | ✅ Full support |
+| MySQL | ✅ Full support |
+| SQLite | ✅ Full support |
+| SQL Server | ⚠️ Partial |
+
+### Example
+
+```sql
+CREATE TABLE users (
+  id SERIAL PRIMARY KEY,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  name TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE orders (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id),
+  total DECIMAL(10,2) NOT NULL,
+  status VARCHAR(20) CHECK (status IN ('pending', 'shipped', 'delivered'))
+);
+```
+
+Upload this file in the **Get Started** page → SQL (File Upload).
+
+## Supabase (PostgreSQL)
+
+Connect directly to a Supabase project to extract the live schema:
+
+1. Go to your Supabase project → **Settings → Database**
+2. Copy the **Connection string (URI)**
+3. Paste it in the UI: **Get Started** page → Supabase
+
+The extractor retrieves:
+- All tables and views
+- Column types and defaults
+- Foreign key relationships
+- RLS (Row Level Security) policies
+- Indexes
+
+> **Note:** Supabase connections use the PostgreSQL wire protocol. Your database must allow external connections.
