@@ -1,0 +1,11 @@
+id,name,description,parent_id,created_at
+1,Electronics,"Devices and gadgets including computers, phones, and accessories.",,2023-01-10T08:15:30Z
+2,Computers,"Desktops, laptops, and related components.",1,2023-02-12T09:20:45Z
+3,Smartphones,Mobile phones and accessories.,1,2023-02-13T10:05:12Z
+4,Home & Kitchen,"Appliances, cookware, and home décor.",,2023-03-05T14:30:00Z
+5,Furniture,"Living room, bedroom, and office furniture.",4,2023-03-07T11:45:22Z
+6,Books,"Fiction, non-fiction, textbooks, and e-books.",,2023-04-01T07:55:33Z
+7,Science Fiction,Sci-fi novels and series.,6,2023-04-02T12:10:05Z
+8,Clothing,"Men's, women's, and children's apparel.",,2023-05-15T16:25:40Z
+9,Men's Clothing,"Shirts, pants, suits, and accessories for men.",8,2023-05-16T09:00:00Z
+10,Women's Clothing,"Dresses, tops, skirts, and accessories for women.",8,2023-05-16T10:15:20Z

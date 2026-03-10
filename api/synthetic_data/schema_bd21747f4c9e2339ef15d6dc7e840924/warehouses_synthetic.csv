@@ -1,0 +1,11 @@
+id,name,code,location,capacity,manager_name,contact_phone,is_active,created_at
+1,Northgate Distribution Center,NGDC001,"Chicago, IL, USA",8500,Laura Mitchell,+1-312-555-0198,True,2023-02-14T08:45:00Z
+2,Pacific Coast Warehouse,PCW002,"Los Angeles, CA, USA",12000,Javier Ramos,+1-213-555-0234,True,2022-11-03T14:20:00Z
+3,Midwest Logistics Hub,MLH003,"Columbus, OH, USA",6400,Emily Chen,+1-614-555-0678,False,2021-07-19T11:05:00Z
+4,Southern Supply Depot,SSD004,"Atlanta, GA, USA",7200,Marcus Lee,+1-404-555-1122,True,2023-05-22T09:30:00Z
+5,Great Lakes Storage Facility,GLSF005,"Cleveland, OH, USA",9500,Sofia Patel,+1-216-555-3344,True,2022-01-10T16:15:00Z
+6,Desert Edge Warehouse,DEW006,"Phoenix, AZ, USA",5300,Carlos Mendoza,+1-602-555-7788,False,2020-09-05T13:40:00Z
+7,Atlantic Port Storage,APS007,"Newark, NJ, USA",10800,Natalie Brooks,+1-973-555-2211,True,2023-08-12T07:55:00Z
+8,Mountain View Logistics,MVL008,"Denver, CO, USA",7700,Ethan Clarke,+1-720-555-4455,True,2022-04-27T12:10:00Z
+9,Heartland Freight Center,HFC009,"Kansas City, MO, USA",6600,Olivia Jensen,+1-816-555-8899,False,2021-12-01T10:25:00Z
+10,Coastal Bay Warehouse,CBW010,"Miami, FL, USA",10200,Derek O'Neil,+1-305-555-6677,True,2023-03-18T15:00:00Z

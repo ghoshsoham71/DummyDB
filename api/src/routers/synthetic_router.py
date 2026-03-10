@@ -6,7 +6,7 @@ from pathlib import Path
 from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, Request, Query, Depends, BackgroundTasks
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, StreamingResponse
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from pydantic import BaseModel
@@ -18,7 +18,7 @@ from src.lib.schemas import (
 )
 from src.utils.job_manager import job_manager, JobType
 from src.utils.file_manager import file_manager
-from src.routers.schema_parse_router import get_schema_by_id
+from src.services.schema_store import get_schema_by_id
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -40,7 +40,7 @@ class GenerateRequest(BaseModel):
 
 def synthetic_generation_handler(parameters: Dict[str, Any], 
                                progress_callback=None) -> Dict[str, Any]:
-    """Handler for synthetic data generation jobs"""
+    """Handler for synthetic data generation jobs using Groq LLM."""
     try:
         if progress_callback:
             progress_callback(10, "Loading schema...")
@@ -52,93 +52,60 @@ def synthetic_generation_handler(parameters: Dict[str, Any],
         if not schema_data:
             raise Exception(f"Schema {schema_id} not found")
         
-        if progress_callback:
-            progress_callback(20, "Initializing SDV generator...")
-        
-        # Import SDV generator
-        from src.utils.sdv_synthetic_generator import SDVSyntheticGenerator
-        
-        # Initialize generator
-        generator = SDVSyntheticGenerator(schema_data["schema"])
+        schema = schema_data["schema"]
+        num_rows = parameters.get("num_rows", {})
+        # Check if seed data is already provided
+        seed_data_dir = parameters.get("seed_data_dir", f"seed_data/{schema_id}")
+        output_dir = parameters.get("output_dir", f"synthetic_data/{schema_id}")
+        has_seed_data = Path(seed_data_dir).exists() and any(Path(seed_data_dir).glob("*.csv"))
         
         if progress_callback:
-            progress_callback(30, "Creating metadata...")
+            if has_seed_data:
+                progress_callback(20, "Using provided seed data (no rate limit)...")
+            else:
+                progress_callback(20, "Generating seed data with LLM (Groq)...")
         
-        # Create metadata
-        generator.create_metadata()
+        # Generate data using Groq LLM
+        from src.utils.mock_data_generator import generate_mock_data, save_mock_data_csv
         
-        if progress_callback:
-            progress_callback(40, "Loading seed data...")
+        generated_data = generate_mock_data(
+            schema=schema,
+            num_rows=num_rows,
+            default_rows=10,
+            skip_rate_limit=has_seed_data,
+        )
         
-        # Load seed data
-        seed_data_dir = parameters.get("seed_data_dir", "seed_data")
-        generator.load_seed_data(seed_data_dir)
-        
-        if progress_callback:
-            progress_callback(60, "Training synthesizer...")
-        
-        # Train synthesizer
-        synthesizer_type = parameters.get("synthesizer_type", "HMA")
-        generator.train_synthesizer(synthesizer_type)
-        
-        if progress_callback:
-            progress_callback(80, "Generating synthetic data...")
-        
-        # Generate synthetic data
-        scale = parameters.get("scale_factor", 2.0)
-        num_rows = parameters.get("num_rows")
-        
-        if num_rows:
-            synthetic_data = generator.generate_synthetic_data(num_rows=num_rows)
-        else:
-            synthetic_data = generator.generate_synthetic_data(scale=scale)
+        if not generated_data:
+            raise Exception("LLM returned no data for any table")
         
         if progress_callback:
-            progress_callback(90, "Saving synthetic data...")
+            progress_callback(80, "Saving generated data...")
         
-        # Save synthetic data
-        output_dir = parameters.get("output_dir", "synthetic_data")
-        generator.save_synthetic_data(output_dir)
-        
-        if progress_callback:
-            progress_callback(95, "Evaluating quality...")
-        
-        # Evaluate quality
-        try:
-            evaluation = generator.evaluate_quality()
-            quality_score = evaluation.get("overall_score")
-        except Exception as e:
-            logger.warning(f"Quality evaluation failed: {e}")
-            quality_score = None
+        # Save to CSV
+        file_paths = save_mock_data_csv(generated_data, output_dir)
         
         if progress_callback:
             progress_callback(100, "Generation complete!")
         
-        # Get summary
-        summary = generator.get_generation_summary()
-        
-        # Get file paths
-        file_paths = []
-        output_path = Path(output_dir)
-        if output_path.exists():
-            file_paths = [str(f) for f in output_path.glob("*_synthetic.csv")]
+        # Build summary
+        summary = {
+            table: {"rows": len(rows), "columns": len(rows[0]) if rows else 0}
+            for table, rows in generated_data.items()
+        }
         
         return {
             "success": True,
             "output_directory": output_dir,
             "file_paths": file_paths,
-            "quality_score": quality_score,
+            "quality_score": None,
             "generation_summary": summary,
-            "synthesizer_type": synthesizer_type,
-            "scale_factor": scale
+            "synthesizer_type": "groq-llm",
+            "scale_factor": parameters.get("scale_factor", 2.0),
         }
         
     except Exception as e:
         logger.error(f"Synthetic generation failed: {e}")
-        return {
-            "success": False,
-            "error": str(e)
-        }
+        raise  # let the job manager mark it as FAILED
 
 # Register handler
 job_manager.register_handler(JobType.SYNTHETIC_GENERATION, synthetic_generation_handler)
@@ -203,6 +170,87 @@ async def generate_synthetic_data(
             message=f"Failed to submit generation job: {str(e)}",
             processing_time=0.0
         )
+
+@router.post("/generate/stream")
+@limiter.limit("3/minute")
+async def generate_synthetic_data_stream(
+    request: Request,
+    generate_request: GenerateRequest,
+):
+    """
+    Stream synthetic data generation via Server-Sent Events.
+    Each table's progress is sent as a separate SSE event.
+    """
+    schema_data = get_schema_by_id(generate_request.schema_id)
+    if not schema_data:
+        raise HTTPException(status_code=404, detail=f"Schema {generate_request.schema_id} not found")
+
+    # Check if seed data exists → skip rate limiting
+    seed_dir = Path(f"seed_data/{generate_request.schema_id}")
+    has_seed_data = seed_dir.exists() and any(seed_dir.glob("*.csv"))
+
+    from src.utils.mock_data_generator import generate_mock_data_streaming
+
+    def event_stream():
+        for event_json in generate_mock_data_streaming(
+            schema=schema_data["schema"],
+            num_rows=generate_request.num_rows or {},
+            default_rows=10,
+            output_dir=f"synthetic_data/{generate_request.schema_id}",
+            skip_rate_limit=has_seed_data,
+        ):
+            yield f"data: {event_json}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+@router.get("/rate-limits")
+async def get_rate_limits():
+    """Return current rate limit configuration for UI display."""
+    from src.utils.rate_limiter import (
+        MAX_TOKENS, REFILL_RATE, MAX_CONCURRENT,
+        MAX_TABLES_PER_REQUEST, MAX_ROWS_PER_TABLE,
+    )
+    return {
+        "requests_per_minute": 3,
+        "token_bucket_size": MAX_TOKENS,
+        "token_refill_per_sec": REFILL_RATE,
+        "max_concurrent_calls": MAX_CONCURRENT,
+        "max_tables_per_request": MAX_TABLES_PER_REQUEST,
+        "max_rows_per_table": MAX_ROWS_PER_TABLE,
+        "seed_data_bypasses": True,
+    }
+
+@router.get("/download/{schema_id}")
+@limiter.limit("20/minute")
+async def download_synthetic_data(request: Request, schema_id: str):
+    """Download generated synthetic data as a ZIP archive."""
+    output_dir = Path(f"synthetic_data/{schema_id}")
+    if not output_dir.exists():
+        raise HTTPException(status_code=404, detail=f"No generated data found for schema {schema_id}")
+
+    csv_files = list(output_dir.glob("*.csv"))
+    if not csv_files:
+        raise HTTPException(status_code=404, detail="No CSV files found in the output directory")
+
+    # Create ZIP archive
+    archive_path = file_manager.create_archive(
+        [str(f) for f in csv_files],
+        f"synthetic_{schema_id}",
+    )
+
+    return FileResponse(
+        path=archive_path,
+        filename=f"synthetic_{schema_id}.zip",
+        media_type="application/zip",
+    )
 
 @router.get("/jobs/{job_id}/status")
 @limiter.limit("50/minute")

@@ -47,25 +47,24 @@ class Neo4jExtractor:
                 node_tables = self._extract_nodes(session)
                 rel_tables = self._extract_relationships(session)
                 stats = self._get_db_stats(session)
-
-            db_name = self.database or "neo4j"
-            tables = node_tables + rel_tables
-
-            return {
-                "databases": [{
-                    "name": db_name,
-                    "tables": tables,
-                    "statistics": stats,
-                }],
-                "source": "neo4j",
-                "connection": {
-                    "uri": self.uri,
-                    "http_browser": self.uri.replace("bolt://", "http://").replace("7687", "7474"),
-                },
-            }
-
         finally:
             driver.close()
+
+        db_name = self.database or "neo4j"
+        tables = node_tables + rel_tables
+
+        return {
+            "databases": [{
+                "name": db_name,
+                "tables": tables,
+                "statistics": stats,
+            }],
+            "source": "neo4j",
+            "connection": {
+                "uri": self.uri,
+                "http_browser": self.uri.replace("bolt://", "http://").replace("7687", "7474"),
+            },
+        }
 
     # ------------------------------------------------------------------
     # Node extraction
@@ -224,12 +223,11 @@ class Neo4jExtractor:
                 ctype = rec_dict.get("type", "")
                 if isinstance(entity, list) and label in entity:
                     for p in (props if isinstance(props, list) else []):
-                        if p not in constraints:
-                            constraints[p] = []
+                        entry: List[str] = constraints.setdefault(p, [])
                         if "UNIQUE" in ctype.upper():
-                            constraints[p].append("UNIQUE")
+                            entry.append("UNIQUE")
                         if "NOT NULL" in ctype.upper() or "EXIST" in ctype.upper():
-                            constraints[p].append("NOT_NULL")
+                            entry.append("NOT_NULL")
         except Exception:
             pass  # older Neo4j version without SHOW CONSTRAINTS
         return constraints

@@ -23,6 +23,7 @@ dependencies = [
     "uvicorn>=0.35.0",
     "pymongo>=4.6.0",
     "neo4j>=5.17.0",
+    "httpx>=0.28.1",
 ]
 
 [dependency-groups]

@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
@@ -41,7 +44,15 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Migration init failed: {e}")
 
+    # Start the job manager so queued jobs are actually processed
+    from src.utils.job_manager import job_manager
+    job_manager.start()
+    logger.info("Job manager started")
+
     yield
+
+    # Graceful shutdown
+    job_manager.stop()
     logger.info("Shutting down BurstDB API...")
 
 

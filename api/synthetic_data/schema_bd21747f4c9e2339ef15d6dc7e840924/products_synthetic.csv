@@ -1,0 +1,11 @@
+id,name,description,price,cost_price,stock_quantity,category_id,brand,sku,weight,dimensions,created_at,updated_at,is_active
+1,Wireless Bluetooth Headphones,"Over-ear headphones with active noise cancellation, 30-hour battery life, and built‑in microphone.",129.99,85.0,57,2,SoundPulse,SKU-0001,0.35,20x15x5 cm,2024-01-12T08:45:20Z,2024-02-28T14:12:05Z,True
+2,Stainless Steel Water Bottle,18‑oz insulated bottle that keeps drinks cold for 24 hours or hot for 12 hours.,24.49,12.3,132,4,EcoHydro,SKU-0002,0.45,7x7x25 cm,2023-11-05T12:20:10Z,2024-01-22T09:33:44Z,True
+3,Organic Cotton T‑Shirt,"Unisex soft‑feel tee made from 100 % certified organic cotton, available in multiple colors.",19.99,8.75,240,1,GreenThread,SKU-0003,0.18,30x25x1 cm,2024-02-14T15:07:55Z,2024-03-01T11:02:13Z,True
+4,"4K Ultra HD Smart TV 55""","55‑inch OLED display with HDR10+, built‑in streaming apps, and voice control support.",1199.0,950.0,12,3,VisionMax,SKU-0004,22.5,124x71x5 cm,2023-12-20T09:55:30Z,2024-02-10T16:44:21Z,True
+5,Ergonomic Office Chair,"Mesh back, lumbar support, and adjustable height and armrests for all‑day comfort.",349.95,260.0,34,3,ComfortWorks,SKU-0005,15.2,70x70x120 cm,2024-01-03T07:18:42Z,2024-02-25T13:57:09Z,True
+6,Portable Solar Charger 20000 mAh,High‑capacity power bank with dual USB‑C ports and built‑in 6‑W solar panel.,59.99,38.5,78,5,SunCharge,SKU-0006,0.55,15x10x3 cm,2024-02-01T10:22:11Z,2024-03-05T08:41:36Z,True
+7,Premium Leather Wallet,Hand‑stitched full‑grain leather wallet with RFID blocking and 8 card slots.,79.0,45.2,95,1,HeritageCraft,SKU-0007,0.12,11x9x2 cm,2023-10-15T14:03:27Z,2024-01-30T12:19:58Z,True
+8,Gaming Mechanical Keyboard,"RGB backlit keyboard with Cherry MX Red switches, programmable macros, and detachable wrist rest.",149.99,110.0,41,2,KeyForge,SKU-0008,1.1,45x15x4 cm,2024-02-18T06:49:03Z,2024-03-02T15:27:14Z,True
+9,Smart Home Thermostat,"Wi‑Fi enabled thermostat with learning algorithms, energy‑saving schedules, and mobile app control.",199.5,150.0,63,5,ThermoSmart,SKU-0009,0.28,10x10x3 cm,2024-01-27T11:35:19Z,2024-02-20T09:08:42Z,True
+10,Deluxe Chef Knife Set (5‑Piece),"Professional stainless‑steel knives with ergonomic handles, includes block and sharpening steel.",219.99,165.0,27,4,CulinaryEdge,SKU-0010,2.3,35x25x10 cm,2023-12-02T13:14:55Z,2024-02-12T17:22:31Z,True

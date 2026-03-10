@@ -16,7 +16,7 @@ from src.lib.schemas import (
 )
 from src.utils.job_manager import job_manager, JobType
 from src.utils.file_manager import file_manager
-from src.routers.schema_parse_router import get_schema_by_id
+from src.services.schema_store import get_schema_by_id
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
