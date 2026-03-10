@@ -24,12 +24,17 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+import { CustomLogo } from "@/components/CustomLogo";
+
 const navbar = (
   <Navbar
-    logo={<b>BurstDB</b>}
+    logo={<CustomLogo />}
     projectLink="https://github.com/ghoshsoham71/BurstDB"
   >
-    <ModeToggle />
+    <div className="flex items-center gap-2">
+      <ModeToggle />
+      <NavbarAuth />
+    </div>
   </Navbar>
 );
 const footer = <Footer></Footer>;
@@ -42,6 +47,11 @@ const feedback = {
 const sidebar = {
   toggleButton: false,
 };
+
+import { AuthProvider } from "@/lib/auth-context";
+import { NavbarAuth } from "@/components/NavbarAuth";
+import { ConditionalSearch } from "@/components/ConditionalSearch";
+import { HideNavLinks } from "@/components/HideNavLinks";
 
 export default async function RootLayout({
   children,
@@ -62,21 +72,25 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <ConditionalSearch />
+          <HideNavLinks />
           <TooltipProvider>
-            <Layout
-              navbar={navbar}
-              pageMap={await getPageMap()}
-              docsRepositoryBase="https://github.com/ghoshsoham71/BurstDB/tree/main/ui"
-              footer={footer}
-              // editLink={null}
-              feedback={feedback}
-              darkMode={false}
-              sidebar={sidebar}
+            <AuthProvider>
+              <Layout
+                navbar={navbar}
+                pageMap={await getPageMap()}
+                docsRepositoryBase="https://github.com/ghoshsoham71/BurstDB/tree/main/ui"
+                footer={footer}
+                // editLink={null}
+                feedback={feedback}
+                darkMode={false}
+                sidebar={sidebar}
 
               // ... Your additional layout options
-            >
-              {children}
-            </Layout>
+              >
+                {children}
+              </Layout>
+            </AuthProvider>
           </TooltipProvider>
         </ThemeProvider>
       </body>

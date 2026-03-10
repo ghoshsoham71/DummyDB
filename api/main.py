@@ -14,6 +14,7 @@ from src.routers.schema_router import router as schema_router
 from src.routers.migration_router import router as migration_router
 from src.routers.synthetic_router import router as synthetic_router
 from src.routers.dashboard_router import router as dashboard_router
+from src.routers.auth_router import router as auth_router
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -77,6 +78,7 @@ app.add_middleware(
 )
 
 # Register routers
+app.include_router(auth_router, prefix="/api/v1")
 app.include_router(parse_router, prefix="/api/v1")
 app.include_router(schema_router, prefix="/api/v1")
 app.include_router(migration_router, prefix="/api/v1")

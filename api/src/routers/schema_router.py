@@ -6,11 +6,12 @@ import os
 import logging
 from typing import Optional, Dict, Any, List
 
-from fastapi import APIRouter, HTTPException, Request, Query
+from fastapi import APIRouter, HTTPException, Request, Query, Depends
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from src.services.schema_store import PARSED_SCHEMAS
+from src.services.schema_store import PARSED_SCHEMAS, get_user_schemas
+from src.lib.auth import get_current_user
 
 logger = logging.getLogger(__name__)
 
@@ -27,12 +28,14 @@ async def list_schemas(
     sort_by: str = Query("created_at"),
     sort_order: str = Query("desc"),
     search: Optional[str] = Query(None),
+    user=Depends(get_current_user),
 ):
-    """List schemas with pagination, sorting, and search."""
-    filtered = PARSED_SCHEMAS
+    """List schemas with pagination, sorting, and search (user-scoped)."""
+    user_schemas = get_user_schemas(user.id)
+    filtered = user_schemas
     if search:
         filtered = {
-            k: v for k, v in PARSED_SCHEMAS.items()
+            k: v for k, v in user_schemas.items()
             if search.lower() in v["filename"].lower()
         }
 
@@ -78,12 +81,14 @@ async def get_schema(
     schema_id: str,
     include_metadata: bool = Query(True),
     format_output: bool = Query(False),
+    user=Depends(get_current_user),
 ):
-    """Get specific schema by ID."""
+    """Get specific schema by ID (user-scoped)."""
     if schema_id not in PARSED_SCHEMAS:
         raise HTTPException(status_code=404, detail=f"Schema '{schema_id}' not found")
-
     sdata = PARSED_SCHEMAS[schema_id]
+    if sdata.get("user_id") != user.id:
+        raise HTTPException(status_code=404, detail=f"Schema '{schema_id}' not found")
     response: Dict[str, Any] = {"schema_id": schema_id, "schema": sdata["schema"]}
 
     if include_metadata:
@@ -125,9 +130,11 @@ async def get_schema(
 
 @router.delete("/schemas/{schema_id}")
 @limiter.limit("20/minute")
-async def delete_schema(request: Request, schema_id: str):
-    """Delete schema from memory by ID."""
+async def delete_schema(request: Request, schema_id: str, user=Depends(get_current_user)):
+    """Delete schema from memory by ID (user-scoped)."""
     if schema_id not in PARSED_SCHEMAS:
+        raise HTTPException(status_code=404, detail=f"Schema '{schema_id}' not found")
+    if PARSED_SCHEMAS[schema_id].get("user_id") != user.id:
         raise HTTPException(status_code=404, detail=f"Schema '{schema_id}' not found")
 
     deleted = PARSED_SCHEMAS.pop(schema_id)
@@ -154,13 +161,14 @@ async def bulk_delete_schemas(
     request: Request,
     schema_ids: List[str],
     delete_files: bool = Query(False),
+    user=Depends(get_current_user),
 ):
-    """Delete multiple schemas at once."""
+    """Delete multiple schemas at once (user-scoped)."""
     deleted_list = []
     not_found = []
 
     for sid in schema_ids:
-        if sid in PARSED_SCHEMAS:
+        if sid in PARSED_SCHEMAS and PARSED_SCHEMAS[sid].get("user_id") == user.id:
             removed = PARSED_SCHEMAS.pop(sid)
             deleted_list.append({"schema_id": sid, "filename": removed["filename"]})
             if delete_files:
@@ -183,9 +191,11 @@ async def bulk_delete_schemas(
 
 @router.get("/schemas/{schema_id}/tables/{table_name}")
 @limiter.limit("50/minute")
-async def get_table_details(request: Request, schema_id: str, table_name: str):
-    """Get detailed information about a specific table."""
+async def get_table_details(request: Request, schema_id: str, table_name: str, user=Depends(get_current_user)):
+    """Get detailed information about a specific table (user-scoped)."""
     if schema_id not in PARSED_SCHEMAS:
+        raise HTTPException(status_code=404, detail=f"Schema '{schema_id}' not found")
+    if PARSED_SCHEMAS[schema_id].get("user_id") != user.id:
         raise HTTPException(status_code=404, detail=f"Schema '{schema_id}' not found")
 
     schema = PARSED_SCHEMAS[schema_id]["schema"]

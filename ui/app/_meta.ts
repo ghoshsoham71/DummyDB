@@ -11,6 +11,7 @@ const meta = {
   dashboard: {
     type: "page",
     title: "Dashboard",
+    display: "hidden",
   },
   docs: {
     type: "page",

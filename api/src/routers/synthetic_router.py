@@ -18,7 +18,8 @@ from src.lib.schemas import (
 )
 from src.utils.job_manager import job_manager, JobType
 from src.utils.file_manager import file_manager
-from src.services.schema_store import get_schema_by_id
+from src.services.schema_store import get_schema_by_id, PARSED_SCHEMAS
+from src.lib.auth import get_current_user
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -115,7 +116,8 @@ job_manager.register_handler(JobType.SYNTHETIC_GENERATION, synthetic_generation_
 async def generate_synthetic_data(
     request: Request,
     generate_request: GenerateRequest,
-    background_tasks: BackgroundTasks
+    background_tasks: BackgroundTasks,
+    user=Depends(get_current_user),
 ):
     """
     Generate synthetic data from schema
@@ -133,6 +135,8 @@ async def generate_synthetic_data(
                 status_code=404,
                 detail=f"Schema {generate_request.schema_id} not found"
             )
+        if schema_data.get("user_id") != user.id:
+            raise HTTPException(status_code=404, detail="Schema not found")
         
         # Prepare job parameters
         job_params = {
@@ -176,6 +180,7 @@ async def generate_synthetic_data(
 async def generate_synthetic_data_stream(
     request: Request,
     generate_request: GenerateRequest,
+    user=Depends(get_current_user),
 ):
     """
     Stream synthetic data generation via Server-Sent Events.
@@ -184,6 +189,8 @@ async def generate_synthetic_data_stream(
     schema_data = get_schema_by_id(generate_request.schema_id)
     if not schema_data:
         raise HTTPException(status_code=404, detail=f"Schema {generate_request.schema_id} not found")
+    if schema_data.get("user_id") != user.id:
+        raise HTTPException(status_code=404, detail="Schema not found")
 
     # Check if seed data exists → skip rate limiting
     seed_dir = Path(f"seed_data/{generate_request.schema_id}")
@@ -230,8 +237,13 @@ async def get_rate_limits():
 
 @router.get("/download/{schema_id}")
 @limiter.limit("20/minute")
-async def download_synthetic_data(request: Request, schema_id: str):
+async def download_synthetic_data(request: Request, schema_id: str, user=Depends(get_current_user)):
     """Download generated synthetic data as a ZIP archive."""
+    # Verify user owns this schema
+    schema_data = PARSED_SCHEMAS.get(schema_id)
+    if not schema_data or schema_data.get("user_id") != user.id:
+        raise HTTPException(status_code=404, detail="Schema not found")
+
     output_dir = Path(f"synthetic_data/{schema_id}")
     if not output_dir.exists():
         raise HTTPException(status_code=404, detail=f"No generated data found for schema {schema_id}")
@@ -254,7 +266,7 @@ async def download_synthetic_data(request: Request, schema_id: str):
 
 @router.get("/jobs/{job_id}/status")
 @limiter.limit("50/minute")
-async def get_generation_status(request: Request, job_id: str):
+async def get_generation_status(request: Request, job_id: str, user=Depends(get_current_user)):
     """Get status of synthetic data generation job"""
     job = job_manager.get_job(job_id)
     
@@ -281,7 +293,8 @@ async def get_generation_status(request: Request, job_id: str):
 async def list_generation_jobs(
     request: Request,
     limit: int = Query(50, ge=1, le=100),
-    offset: int = Query(0, ge=0)
+    offset: int = Query(0, ge=0),
+    user=Depends(get_current_user),
 ):
     """List synthetic data generation jobs"""
     jobs = job_manager.get_job_list(
@@ -299,7 +312,7 @@ async def list_generation_jobs(
 
 @router.delete("/jobs/{job_id}")
 @limiter.limit("10/minute")
-async def cancel_generation_job(request: Request, job_id: str):
+async def cancel_generation_job(request: Request, job_id: str, user=Depends(get_current_user)):
     """Cancel a synthetic data generation job"""
     success = job_manager.cancel_job(job_id)
     
@@ -394,7 +407,8 @@ async def get_generation_templates(request: Request):
 async def batch_generate_synthetic_data(
     request: Request,
     schema_ids: List[str],
-    config: Optional[Dict[str, Any]] = None
+    config: Optional[Dict[str, Any]] = None,
+    user=Depends(get_current_user),
 ):
     """Generate synthetic data for multiple schemas"""
     try:
@@ -441,7 +455,7 @@ async def batch_generate_synthetic_data(
 
 @router.get("/stats")
 @limiter.limit("50/minute")
-async def get_generation_stats(request: Request):
+async def get_generation_stats(request: Request, user=Depends(get_current_user)):
     """Get synthetic data generation statistics"""
     try:
         # Get job statistics

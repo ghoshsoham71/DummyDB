@@ -6,8 +6,10 @@ from pathlib import Path
 import hashlib
 import json
 logger = logging.getLogger(__name__)
-from dotenv import load_dotenv
-load_dotenv()
+
+from src.lib.supabase_client import get_supabase_client as _get_client
+
+
 class DatabaseMigrator:
     """Handle database migrations and schema updates"""
     
@@ -16,20 +18,8 @@ class DatabaseMigrator:
         self.migrations_dir.mkdir(exist_ok=True)
         
     def get_supabase_client(self):
-        """Get Supabase client with service role key"""
-        try:
-            from supabase import create_client
-            
-            url = os.getenv("SUPABASE_URL")
-            key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-            
-            if not url or not key:
-                raise ValueError("Supabase credentials not found in environment variables")
-            
-            return create_client(url, key)
-        except Exception as e:
-            logger.error(f"Failed to create Supabase client: {e}")
-            raise
+        """Get Supabase client with service role key (delegates to shared singleton)."""
+        return _get_client()
 
     def create_migrations_table(self) -> bool:
         """Create migrations tracking table if it doesn't exist"""

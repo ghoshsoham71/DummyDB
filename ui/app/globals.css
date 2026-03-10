@@ -112,22 +112,56 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
+@layer utilities {
+  .bg-silk {
+    background: linear-gradient(-45deg,
+        oklch(0.85 0.08 60),
+        /* Light Amber / Stone */
+        oklch(0.80 0.12 70),
+        /* Warm Taupe */
+        oklch(0.85 0.10 150),
+        /* Soft Emerald */
+        oklch(0.85 0.09 300),
+        /* Soft Purple */
+        oklch(0.75 0.15 50),
+        /* Deeper Amber */
+        oklch(0.92 0.05 80)
+        /* Very Light Stone */
+      );
+    background-size: 400% 400%;
+    animation: silk-movement 15s ease infinite;
   }
-  body {
-    @apply bg-background text-foreground;
-    font-family: var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+
+  .dark .bg-silk {
+    background: linear-gradient(-45deg,
+        oklch(0.3 0.05 60),
+        /* Dark Amber / Stone */
+        oklch(0.2 0.06 70),
+        /* Deep Taupe */
+        oklch(0.35 0.08 150),
+        /* Deep Emerald */
+        oklch(0.35 0.08 300),
+        /* Deep Purple */
+        oklch(0.4 0.1 50),
+        /* Rich Amber */
+        oklch(0.25 0.04 80)
+        /* Dark Stone */
+      );
+    background-size: 400% 400%;
+    animation: silk-movement 15s ease infinite;
   }
-  
-  /* Force Geist Sans everywhere */
-  *, *::before, *::after {
-    font-family: var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+@keyframes silk-movement {
+  0% {
+    background-position: 0% 50%;
   }
-  
-  /* Force Geist Mono for code elements */
-  code, pre, kbd, samp, .font-mono {
-    font-family: var(--font-geist-mono), 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace !important;
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
   }
 }

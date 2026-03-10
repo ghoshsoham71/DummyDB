@@ -7,14 +7,15 @@ import time
 from typing import Dict, Any, List
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Depends
 from fastapi.responses import JSONResponse
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 from src.utils.job_manager import job_manager, JobType
 from src.utils.file_manager import file_manager
-from src.services.schema_store import PARSED_SCHEMAS
+from src.services.schema_store import PARSED_SCHEMAS, get_user_schemas
+from src.lib.auth import get_current_user
 
 logger = logging.getLogger(__name__)
 
@@ -25,14 +26,15 @@ limiter = Limiter(key_func=get_remote_address)
 
 @router.get("/overview")
 @limiter.limit("60/minute")
-async def dashboard_overview(request: Request):
-    """Aggregated dashboard overview with schema, job, and storage stats."""
+async def dashboard_overview(request: Request, user=Depends(get_current_user)):
+    """Aggregated dashboard overview with schema, job, and storage stats (user-scoped)."""
     try:
-        # --- Schema stats ---
-        total_schemas = len(PARSED_SCHEMAS)
+        # --- Schema stats (user-scoped) ---
+        user_schemas = get_user_schemas(user.id)
+        total_schemas = len(user_schemas)
         sources: Dict[str, int] = {}
         total_tables = 0
-        for _sid, sdata in PARSED_SCHEMAS.items():
+        for _sid, sdata in user_schemas.items():
             src = (sdata.get("metadata") or {}).get("source", "sql_upload")
             sources[src] = sources.get(src, 0) + 1
             schema_obj = sdata.get("schema", {})
@@ -75,12 +77,13 @@ async def dashboard_overview(request: Request):
 
 @router.get("/activity")
 @limiter.limit("60/minute")
-async def dashboard_activity(request: Request, limit: int = 20):
-    """Recent activity timeline across schemas and jobs."""
+async def dashboard_activity(request: Request, limit: int = 20, user=Depends(get_current_user)):
+    """Recent activity timeline across schemas and jobs (user-scoped)."""
     events: List[Dict[str, Any]] = []
 
-    # Schema creation events
-    for sid, sdata in PARSED_SCHEMAS.items():
+    # Schema creation events (user-scoped)
+    user_schemas = get_user_schemas(user.id)
+    for sid, sdata in user_schemas.items():
         created = sdata.get("created_at")
         source = (sdata.get("metadata") or {}).get("source", "sql_upload")
         events.append({
@@ -114,11 +117,12 @@ async def dashboard_activity(request: Request, limit: int = 20):
 
 @router.get("/schema-stats")
 @limiter.limit("60/minute")
-async def dashboard_schema_stats(request: Request):
-    """Detailed schema-level analytics."""
+async def dashboard_schema_stats(request: Request, user=Depends(get_current_user)):
+    """Detailed schema-level analytics (user-scoped)."""
     schemas_info: List[Dict[str, Any]] = []
 
-    for sid, sdata in PARSED_SCHEMAS.items():
+    user_schemas = get_user_schemas(user.id)
+    for sid, sdata in user_schemas.items():
         schema_obj = sdata.get("schema", {})
         databases = schema_obj.get("databases", [])
         table_count = sum(len(db.get("tables", [])) for db in databases)

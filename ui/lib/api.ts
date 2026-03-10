@@ -1,3 +1,5 @@
+import { supabase } from "./supabase";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
 /* ─── Types ─── */
@@ -96,13 +98,37 @@ export interface ActivityEvent {
 
 /* ─── Helpers ─── */
 
-async function apiFetch<T>(path: string, opts?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, opts);
+export async function apiFetch<T>(path: string, opts?: RequestInit): Promise<T> {
+  const { data: { session } } = await supabase.auth.getSession();
+
+  const headers = new Headers(opts?.headers || {});
+  if (session?.access_token) {
+    headers.set("Authorization", `Bearer ${session.access_token}`);
+  }
+
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...opts,
+    headers,
+  });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.detail || body.message || `Request failed: ${res.statusText}`);
   }
   return res.json();
+}
+
+export async function deleteAccount() {
+  return apiFetch<{ message: string }>("/auth/me", { method: "DELETE" });
+}
+
+export async function checkUsernameAvailable(username: string): Promise<{ available: boolean }> {
+  try {
+    return await apiFetch<{ available: boolean }>(`/auth/check-username?username=${encodeURIComponent(username)}`, { method: "GET" });
+  } catch (error) {
+    // If the check fails for any reason (e.g. backend down), return false for safety
+    console.error("Failed to check username availability", error);
+    return { available: false };
+  }
 }
 
 /* ─── Schema Endpoints ─── */
@@ -214,9 +240,15 @@ export async function generateSyntheticDataStream(
   payload: GeneratePayload,
   onEvent: (evt: StreamEvent) => void,
 ) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const headers = new Headers({ "Content-Type": "application/json" });
+  if (session?.access_token) {
+    headers.set("Authorization", `Bearer ${session.access_token}`);
+  }
+
   const res = await fetch(`${API_BASE}/synthetic/generate/stream`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify(payload),
   });
 

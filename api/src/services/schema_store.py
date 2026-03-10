@@ -87,6 +87,14 @@ def get_schema_by_id(schema_id: str) -> Optional[Dict[str, Any]]:
     return schema_data
 
 
+def get_user_schemas(user_id: str) -> Dict[str, Dict[str, Any]]:
+    """Get schemas belonging to a specific user."""
+    return {
+        k: v for k, v in PARSED_SCHEMAS.items()
+        if v.get("user_id") == user_id
+    }
+
+
 def get_all_schemas() -> Dict[str, Dict[str, Any]]:
     """Get all schemas (shallow copy)."""
     return {k: v.copy() for k, v in PARSED_SCHEMAS.items()}

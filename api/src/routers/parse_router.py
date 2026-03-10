@@ -10,7 +10,7 @@ from typing import Dict, Any
 from pathlib import Path
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException, Request, UploadFile, File, Query
+from fastapi import APIRouter, HTTPException, Request, UploadFile, File, Query, Depends
 from fastapi.responses import JSONResponse
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -27,6 +27,7 @@ from src.lib.database import insert_schema, check_schema_exists_by_hash
 from src.services.schema_store import (
     PARSED_SCHEMAS, MAX_FILE_SIZE, schema_manager,
 )
+from src.lib.auth import get_current_user
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +63,7 @@ def _store_schema(
     source: str,
     save_to_disk: bool,
     extra_metadata: Dict[str, Any] | None = None,
+    user_id: str | None = None,
 ) -> str | None:
     """Persist schema in memory and optionally to disk. Returns file_path."""
     schema_manager.cleanup_old_schemas()
@@ -72,6 +74,7 @@ def _store_schema(
         "created_at": time.time(),
         "file_size": len(content_bytes),
         "content_hash": content_hash,
+        "user_id": user_id,
         "metadata": {
             "upload_timestamp": datetime.now(timezone.utc).isoformat(),
             "source": source,
@@ -136,6 +139,7 @@ async def parse_sql_schema(
     file: UploadFile = File(..., description="SQL file to parse"),
     save_to_disk: bool = Query(True),
     overwrite_existing: bool = Query(False),
+    user=Depends(get_current_user),
 ) -> ParseResponse:
     """Parse uploaded SQL file and store schema."""
     start_time = time.time()
@@ -193,6 +197,7 @@ async def parse_sql_schema(
         file_path = _store_schema(
             schema, schema_id, content_hash,
             file.filename, content, "sql_upload", save_to_disk,
+            user_id=user.id,
         )
 
         stats = _compute_stats(schema, {
@@ -225,7 +230,7 @@ async def parse_sql_schema(
 
 @router.post("/parse/supabase", response_model=ParseResponse)
 @limiter.limit("5/minute")
-async def parse_supabase_schema(request: Request, payload: SupabaseParseRequest) -> ParseResponse:
+async def parse_supabase_schema(request: Request, payload: SupabaseParseRequest, user=Depends(get_current_user)) -> ParseResponse:
     """Connect to Supabase and extract schema."""
     start_time = time.time()
     try:
@@ -264,6 +269,7 @@ async def parse_supabase_schema(request: Request, payload: SupabaseParseRequest)
             "supabase_extracted_schema.json", content_bytes,
             "supabase_extractor", payload.save_to_disk,
             {"connection": "**REDACTED**"},
+            user_id=user.id,
         )
 
         stats = _compute_stats(schema, {
@@ -292,7 +298,7 @@ async def parse_supabase_schema(request: Request, payload: SupabaseParseRequest)
 
 @router.post("/parse/mongodb", response_model=ParseResponse)
 @limiter.limit("10/minute")
-async def parse_mongodb_schema(request: Request, payload: MongoDBParseRequest):
+async def parse_mongodb_schema(request: Request, payload: MongoDBParseRequest, user=Depends(get_current_user)):
     """Extract schema from a MongoDB instance."""
     start_time = time.time()
     try:
@@ -319,6 +325,7 @@ async def parse_mongodb_schema(request: Request, payload: MongoDBParseRequest):
             schema, schema_id, content_hash,
             "mongodb_extracted_schema.json", content_bytes,
             "mongodb_extractor", payload.save_to_disk,
+            user_id=user.id,
         )
 
         stats = _compute_stats(schema, {
@@ -347,7 +354,7 @@ async def parse_mongodb_schema(request: Request, payload: MongoDBParseRequest):
 
 @router.post("/parse/neo4j", response_model=ParseResponse)
 @limiter.limit("10/minute")
-async def parse_neo4j_schema(request: Request, payload: Neo4jParseRequest):
+async def parse_neo4j_schema(request: Request, payload: Neo4jParseRequest, user=Depends(get_current_user)):
     """Extract schema from Neo4j via bolt protocol (default bolt://localhost:7687)."""
     start_time = time.time()
     try:
@@ -376,6 +383,7 @@ async def parse_neo4j_schema(request: Request, payload: Neo4jParseRequest):
             "neo4j_extracted_schema.json", content_bytes,
             "neo4j_extractor", payload.save_to_disk,
             {"neo4j_browser": neo4j_browser},
+            user_id=user.id,
         )
 
         databases = schema.get("databases", [])

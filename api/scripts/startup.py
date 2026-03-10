@@ -115,11 +115,8 @@ def verify_schema_changes():
     logger.info("🔍 Verifying schema changes...")
     
     try:
-        from supabase import create_client
-        
-        url = os.getenv("SUPABASE_URL",'')
-        key = os.getenv("SUPABASE_SERVICE_ROLE_KEY",'')
-        supabase = create_client(url, key)
+        from src.lib.supabase_client import get_supabase_client
+        supabase = get_supabase_client()
         
         # Try to query the schema_parse table to verify new columns exist
         result = supabase.table('schema_parse').select('filename, content_hash, file_size').limit(1).execute()
