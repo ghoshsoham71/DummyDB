@@ -198,6 +198,58 @@ export async function generateSyntheticData(payload: GeneratePayload) {
   );
 }
 
+export interface StreamEvent {
+  event: "start" | "table_start" | "table_done" | "error" | "complete";
+  total_tables?: number;
+  table?: string;
+  rows_requested?: number;
+  rows_generated?: number;
+  index?: number;
+  message?: string;
+  file_paths?: string[];
+  summary?: Record<string, { rows: number; columns: number }>;
+}
+
+export async function generateSyntheticDataStream(
+  payload: GeneratePayload,
+  onEvent: (evt: StreamEvent) => void,
+) {
+  const res = await fetch(`${API_BASE}/synthetic/generate/stream`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail || `Request failed: ${res.statusText}`);
+  }
+
+  const reader = res.body?.getReader();
+  if (!reader) throw new Error("No response body");
+
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || "";
+
+    for (const line of lines) {
+      if (line.startsWith("data: ")) {
+        try {
+          const evt: StreamEvent = JSON.parse(line.slice(6));
+          onEvent(evt);
+        } catch { /* skip malformed */ }
+      }
+    }
+  }
+}
+
 export async function getJobStatus(jobId: string) {
   return apiFetch<JobItem>(`/synthetic/jobs/${jobId}/status`);
 }
@@ -218,6 +270,20 @@ export function getDownloadUrl(generationId: string) {
 
 export async function getTemplates() {
   return apiFetch<{ templates: Record<string, GenerationTemplate> }>("/synthetic/templates");
+}
+
+export interface RateLimitInfo {
+  requests_per_minute: number;
+  token_bucket_size: number;
+  token_refill_per_sec: number;
+  max_concurrent_calls: number;
+  max_tables_per_request: number;
+  max_rows_per_table: number;
+  seed_data_bypasses: boolean;
+}
+
+export async function getRateLimits() {
+  return apiFetch<RateLimitInfo>("/synthetic/rate-limits");
 }
 
 export async function getStats() {

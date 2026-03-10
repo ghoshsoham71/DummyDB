@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -9,20 +9,22 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Upload, Database, Save, AlertCircle, FileText, Table, Plus, Trash2, ArrowRight, XCircle, Zap, BarChart3, Library, Globe, ExternalLink } from "lucide-react";
+import { Upload, Database, Save, AlertCircle, FileText, Table, Plus, Trash2, ArrowRight, Zap, BarChart3, Library, Globe, ExternalLink, Info } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   listSchemas,
   getSchema,
   getTemplates,
-  generateSyntheticData,
-  getJobStatus,
-  cancelJob,
+  generateSyntheticDataStream,
+  getRateLimits,
   getDownloadUrl,
   parseMongoDB,
   parseNeo4j,
   type SchemaListItem,
   type GenerationTemplate,
   type Database as DatabaseType,
+  type StreamEvent,
+  type RateLimitInfo,
 } from "@/lib/api";
 
 /* ─── Form Schema ─── */
@@ -76,6 +78,9 @@ export default function GeneratePage() {
     { id: "1", tableName: "", attribute: "", algorithm: "" }
   ]);
   const [neo4jBrowserUrl, setNeo4jBrowserUrl] = useState<string | null>(null);
+  const [streamLog, setStreamLog] = useState<string[]>([]);
+  const logEndRef = useRef<HTMLDivElement>(null);
+  const [rateLimits, setRateLimits] = useState<RateLimitInfo | null>(null);
 
   // Templates & saved schemas
   const [templates, setTemplates] = useState<Record<string, GenerationTemplate>>({});
@@ -93,6 +98,7 @@ export default function GeneratePage() {
   useEffect(() => {
     getTemplates().then((d) => setTemplates(d.templates)).catch(() => {});
     listSchemas(20).then((d) => setSavedSchemas(d.schemas || [])).catch(() => {});
+    getRateLimits().then(setRateLimits).catch(() => {});
   }, []);
 
   const handleTableEntryCountChange = (tableName: string, count: string) => {
@@ -211,53 +217,72 @@ export default function GeneratePage() {
   /* ─── Template application ─── */
   const applyTemplate = (key: string) => setSelectedTemplate(key);
 
-  /* ─── Generate ─── */
+  /* ─── Generate (streaming) ─── */
+  const appendLog = useCallback((msg: string) => {
+    setStreamLog((prev) => [...prev, msg]);
+  }, []);
+
+  useEffect(() => {
+    logEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [streamLog]);
+
   const handleGenerateData = async () => {
     if (!databaseStructure || !schemaId) return;
-    setIsUploading(true); setUploadError(null);
+    setIsUploading(true); setUploadError(null); setUploadSuccess(false);
     setJobId(null); setJobStatus(null); setDownloadLink(null);
+    setStreamLog([]);
     try {
       const tmpl = selectedTemplate ? templates[selectedTemplate] : null;
-      const result = await generateSyntheticData({
-        schema_id: schemaId,
-        scale_factor: tmpl?.scale_factor ?? 2.0,
-        num_rows: tableEntryCounts,
-        synthesizer_type: tmpl?.synthesizer_type ?? "HMA",
-        output_format: "csv",
-      });
-      if (!result.success) throw new Error(result.message || "Generation failed");
-      setJobId(result.generation_id);
-      pollJobStatus(result.generation_id);
+      appendLog("⏳ Starting seed data generation with LLM...");
+      await generateSyntheticDataStream(
+        {
+          schema_id: schemaId,
+          scale_factor: tmpl?.scale_factor ?? 2.0,
+          num_rows: tableEntryCounts,
+          synthesizer_type: tmpl?.synthesizer_type ?? "HMA",
+          output_format: "csv",
+        },
+        (evt: StreamEvent) => {
+          switch (evt.event) {
+            case "start":
+              appendLog(`📋 Found ${evt.total_tables} table(s) to generate`);
+              setJobStatus({ status: "running", progress: 0, message: "Starting..." });
+              break;
+            case "table_start":
+              appendLog(`🔄 [${evt.index}/${evt.total_tables ?? "?"}] Generating ${evt.rows_requested} rows for "${evt.table}"...`);
+              setJobStatus(prev => ({
+                status: "running",
+                progress: ((evt.index! - 1) / (evt.total_tables ?? 1)) * 100,
+                message: `Generating table: ${evt.table}`,
+              }));
+              break;
+            case "table_done":
+              appendLog(`✅ [${evt.index}/${evt.total_tables ?? "?"}] "${evt.table}" — ${evt.rows_generated} rows generated`);
+              setJobStatus(prev => ({
+                status: "running",
+                progress: (evt.index! / (evt.total_tables ?? 1)) * 100,
+                message: `Completed table: ${evt.table}`,
+              }));
+              break;
+            case "error":
+              appendLog(`❌ Error${evt.table ? ` on "${evt.table}"` : ""}: ${evt.message}`);
+              break;
+            case "complete":
+              appendLog(`🎉 Generation complete! ${evt.file_paths?.length ?? 0} file(s) saved.`);
+              setJobStatus({ status: "completed", progress: 100, message: "Complete!" });
+              setUploadSuccess(true);
+              setDownloadLink(getDownloadUrl(schemaId));
+              break;
+          }
+        },
+      );
+      setIsUploading(false);
     } catch (error) {
+      appendLog(`❌ ${error instanceof Error ? error.message : "Generation failed"}`);
       setUploadError(error instanceof Error ? error.message : "Generation failed");
       setIsUploading(false);
     }
   };
-
-  /* ─── Cancel ─── */
-  const handleCancelJob = async () => {
-    if (!jobId) return;
-    try {
-      await cancelJob(jobId);
-      setJobStatus({ status: "cancelled", progress: 0, message: "Job cancelled by user" });
-      setIsUploading(false);
-    } catch { setUploadError("Failed to cancel job"); }
-  };
-
-  /* ─── Polling ─── */
-  const pollJobStatus = useCallback(async (id: string) => {
-    const interval = setInterval(async () => {
-      try {
-        const s = await getJobStatus(id);
-        setJobStatus({ status: s.status, progress: s.progress, message: s.message || "" });
-        if (s.status === "completed" || s.status === "failed" || s.status === "cancelled") {
-          clearInterval(interval); setIsUploading(false);
-          if (s.status === "completed") { setUploadSuccess(true); setDownloadLink(getDownloadUrl(id)); }
-          else if (s.status === "failed") { setUploadError(s.error || "Job failed"); }
-        }
-      } catch { /* retry */ }
-    }, 2000);
-  }, []);
 
   /* ─── Reset ─── */
   const resetToUpload = () => {
@@ -596,31 +621,64 @@ export default function GeneratePage() {
               </div>
 
               {/* Actions */}
-              <div className="flex gap-4 mt-6">
+              <div className="flex gap-4 mt-6 items-center">
                 <Button variant="outline" onClick={resetToUpload} className="flex-1">Back</Button>
                 <Button onClick={handleGenerateData} className="flex-1" disabled={isUploading}>
                   {isUploading ? (<><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" /> Generating...</>) : (<><Database className="h-4 w-4 mr-2" /> Generate Mock Data</>)}
                 </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button type="button" className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" aria-label="Rate limit info">
+                      <Info className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs text-xs leading-relaxed p-3">
+                    {rateLimits ? (
+                      <div className="space-y-1">
+                        <p className="font-semibold mb-1.5">Generation Rate Limits</p>
+                        <p>• <strong>{rateLimits.requests_per_minute}</strong> requests/min</p>
+                        <p>• Max <strong>{rateLimits.max_concurrent_calls}</strong> concurrent LLM calls</p>
+                        <p>• Max <strong>{rateLimits.max_tables_per_request}</strong> tables per request</p>
+                        <p>• Max <strong>{rateLimits.max_rows_per_table}</strong> rows per table</p>
+                        <p>• Burst bucket: <strong>{rateLimits.token_bucket_size}</strong> tokens, refill <strong>{rateLimits.token_refill_per_sec}</strong>/s</p>
+                        {rateLimits.seed_data_bypasses && (
+                          <p className="text-green-500 mt-2 pt-1.5 border-t border-muted-foreground/20">✓ No rate limit when seed data is provided</p>
+                        )}
+                      </div>
+                    ) : (
+                      <p>Loading rate limits…</p>
+                    )}
+                  </TooltipContent>
+                </Tooltip>
               </div>
             </div>
           )}
 
-          {/* Job Progress */}
-          {jobStatus && currentStep === "configure" && !uploadSuccess && (
-            <div className="w-full mt-4 p-4 border rounded-lg bg-muted text-left">
-              <div className="flex justify-between mb-2">
-                <span className="font-medium text-sm text-primary uppercase">{jobStatus.status}</span>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm">{jobStatus.progress.toFixed(0)}%</span>
-                  {(jobStatus.status === "pending" || jobStatus.status === "running") && (
-                    <Button variant="destructive" size="sm" onClick={handleCancelJob}><XCircle className="h-3 w-3 mr-1" /> Cancel</Button>
-                  )}
+          {/* Live Generation Buffer */}
+          {streamLog.length > 0 && currentStep === "configure" && (
+            <div className="w-full mt-4 text-left">
+              {/* Progress bar */}
+              {jobStatus && !uploadSuccess && (
+                <div className="mb-3">
+                  <div className="flex justify-between mb-1">
+                    <span className="font-medium text-xs text-primary uppercase">{jobStatus.status}</span>
+                    <span className="text-xs text-muted-foreground">{jobStatus.progress.toFixed(0)}%</span>
+                  </div>
+                  <div className="w-full bg-secondary rounded-full h-1.5">
+                    <div className="bg-primary h-1.5 rounded-full transition-all duration-300" style={{ width: `${jobStatus.progress}%` }} />
+                  </div>
                 </div>
+              )}
+              {/* Terminal buffer */}
+              <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-4 font-mono text-xs leading-relaxed max-h-64 overflow-y-auto">
+                {streamLog.map((line, i) => (
+                  <div key={i} className="text-zinc-300 py-0.5">
+                    <span className="text-zinc-600 mr-2 select-none">{String(i + 1).padStart(2, "0")}</span>
+                    {line}
+                  </div>
+                ))}
+                <div ref={logEndRef} />
               </div>
-              <div className="w-full bg-secondary rounded-full h-2 mb-2">
-                <div className="bg-primary h-2 rounded-full transition-all" style={{ width: `${jobStatus.progress}%` }} />
-              </div>
-              <p className="text-xs text-muted-foreground">{jobStatus.message}</p>
             </div>
           )}
 

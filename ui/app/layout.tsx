@@ -3,6 +3,7 @@ import { Head } from "nextra/components";
 import "./globals.css";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { Layout, Navbar } from "nextra-theme-docs";
 import { getPageMap } from "nextra/page-map";
 import { Footer } from "@/components/Footer";
@@ -61,20 +62,22 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <Layout
-            navbar={navbar}
-            pageMap={await getPageMap()}
-            docsRepositoryBase="https://github.com/ghoshsoham71/BurstDB/tree/main/ui"
-            footer={footer}
-            // editLink={null}
-            feedback={feedback}
-            darkMode={false}
-            sidebar={sidebar}
+          <TooltipProvider>
+            <Layout
+              navbar={navbar}
+              pageMap={await getPageMap()}
+              docsRepositoryBase="https://github.com/ghoshsoham71/BurstDB/tree/main/ui"
+              footer={footer}
+              // editLink={null}
+              feedback={feedback}
+              darkMode={false}
+              sidebar={sidebar}
 
-            // ... Your additional layout options
-          >
-            {children}
-          </Layout>
+              // ... Your additional layout options
+            >
+              {children}
+            </Layout>
+          </TooltipProvider>
         </ThemeProvider>
       </body>
     </html>
