@@ -20,7 +20,7 @@ In the **Get Started** page, select **MongoDB (NoSQL)** and provide:
 
 | Field | Example | Required |
 |-------|---------|----------|
-| Connection String | `mongodb://localhost:27017` | âœ… |
+| Connection String | `mongodb://localhost:27017` | ✅ |
 | Database Name | `myApp` | Optional (scans all if blank) |
 
 ### Connection String Formats
@@ -65,7 +65,7 @@ mongodb+srv://user:password@cluster.mongodb.net/myDatabase
 
 ## Limitations
 
-- Schema inference is based on sampling â€” rare fields may be missed
+- Schema inference is based on sampling — rare fields may be missed
 - Maximum nesting depth is 3 levels
 - System collections (`system.*`) are skipped
 - `admin`, `local`, and `config` databases are excluded

@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2, Eye, EyeOff, Check, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { checkUsernameAvailable } from "@/lib/api";
+import { Turnstile } from '@marsidev/react-turnstile';
 
 export function AuthPanel() {
     const [isLogin, setIsLogin] = useState(true);
@@ -20,6 +21,8 @@ export function AuthPanel() {
     const [username, setUsername] = useState("");
     const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
     const [checkingUsername, setCheckingUsername] = useState(false);
+
+    const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
     const [showPassword, setShowPassword] = useState(false);
     const [showCheckEmail, setShowCheckEmail] = useState(false);
@@ -86,6 +89,12 @@ export function AuthPanel() {
         setLoading(true);
         setError(null);
 
+        if (!captchaToken) {
+            setError("Please complete the CAPTCHA.");
+            setLoading(false);
+            return;
+        }
+
         try {
             if (isLogin) {
                 const { error } = await supabase.auth.signInWithPassword({
@@ -125,8 +134,8 @@ export function AuthPanel() {
                 <div className="text-center">
                     <h1 className="text-xl sm:text-lg font-bold tracking-tight text-foreground/90">
                         {isLogin
-                            ? ""
-                            : "Welcome. Enter your details to create an account."}
+                            ? "Get Started"
+                            : "Create an Account"}
                     </h1>
                 </div>
 
@@ -191,27 +200,57 @@ export function AuthPanel() {
                                 </button>
                             )}
                         </div>
-                        <div className="relative">
-                            <Input
-                                id="password"
-                                type={showPassword ? "text" : "password"}
-                                required
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                disabled={loading}
-                                className="pr-10 bg-white/20 dark:bg-black/20 border-white/30 dark:border-white/10 backdrop-blur-lg"
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        <div className="flex items-center gap-3 w-full justify-between">
+                            <div className="relative flex-1">
+                                <Input
+                                    id="password"
+                                    type={showPassword ? "text" : "password"}
+                                    required
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    disabled={loading}
+                                    className="pr-10 bg-white/20 dark:bg-black/20 border-white/30 dark:border-white/10 backdrop-blur-lg"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                                >
+                                    {showPassword ? (
+                                        <EyeOff className="h-4 w-4" />
+                                    ) : (
+                                        <Eye className="h-4 w-4" />
+                                    )}
+                                </button>
+                            </div>
+                            <div
+                                className="w-10 h-10 shrink-0 rounded-md border border-white/30 dark:border-white/10 bg-white/20 dark:bg-black/20 backdrop-blur-lg flex items-center justify-center relative"
                             >
-                                {showPassword ? (
-                                    <EyeOff className="h-4 w-4" />
+                                {captchaToken ? (
+                                    <svg className="w-5 h-5 transition-all duration-300 scale-100" viewBox="0 0 128 128">
+                                        <path fill="#F38020" d="M88.74 38.65c-6.83-20-33.81-22.18-44.5-2.58-13.43-5.22-26 5.86-22 19.34C4.19 61 7.27 88.08 30.29 88.08H96c17.65 0 24.32-22.14 11.53-33-2.14-1.84-2.88-5.32-1.31-7.79 3.39-5.37-6.02-14.73-17.48-8.64Z"/>
+                                    </svg>
                                 ) : (
-                                    <Eye className="h-4 w-4" />
+                                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                                 )}
-                            </button>
+                                <div className="absolute inset-0 w-0 h-0 overflow-hidden opacity-0 pointer-events-none">
+                                    <Turnstile
+                                        siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "1x00000000000000000000AA"} // Dummy testing key fallback
+                                        options={{
+                                            size: 'invisible',
+                                        }}
+                                        onSuccess={(token) => {
+                                            setCaptchaToken(token);
+                                            setError(null);
+                                        }}
+                                        onError={() => setError("CAPTCHA validation failed. Please try again.")}
+                                        onExpire={() => {
+                                            setCaptchaToken(null);
+                                            setError("CAPTCHA expired. Please try again.");
+                                        }}
+                                    />
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -222,7 +261,7 @@ export function AuthPanel() {
                     )}
 
                     <div className="flex items-center gap-3 pt-2 w-full">
-                        <Button type="submit" className="flex-1 bg-white/10 hover:bg-white/20 dark:bg-black/20 dark:hover:bg-black/40 border border-white/20 dark:border-white/10 backdrop-blur-md text-foreground shadow-sm transition-all" disabled={loading}>
+                        <Button type="submit" className="flex-1 bg-white/10 hover:bg-white/20 dark:bg-black/20 dark:hover:bg-black/40 border border-white/20 dark:border-white/10 backdrop-blur-md text-foreground shadow-sm transition-all" disabled={loading || !captchaToken}>
                             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             {isLogin ? "Sign In" : "Sign Up"}
                         </Button>

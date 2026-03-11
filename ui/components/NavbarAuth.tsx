@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,9 +13,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { LogOut, User, Settings } from "lucide-react";
 import Link from "next/link";
+import { AccountSettingsDialog } from "./AccountSettingsDialog";
 
 export function NavbarAuth() {
     const { user, signOut, isLoading } = useAuth();
+    const [showSettings, setShowSettings] = useState(false);
 
     if (isLoading) {
         return <div className="w-8 h-8 rounded-full border border-border animate-pulse bg-muted" />;
@@ -25,6 +28,7 @@ export function NavbarAuth() {
     }
 
     return (
+        <>
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center gap-2">
@@ -47,11 +51,9 @@ export function NavbarAuth() {
                 <DropdownMenuItem asChild>
                     <Link href="/dashboard" className="cursor-pointer">Dashboard</Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                    <Link href="/settings" className="cursor-pointer flex items-center">
-                        <Settings className="mr-2 h-4 w-4" />
-                        Account Settings
-                    </Link>
+                <DropdownMenuItem onClick={() => setShowSettings(true)} className="cursor-pointer flex items-center">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Account Settings
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={signOut} className="cursor-pointer text-destructive focus:text-destructive">
@@ -60,5 +62,7 @@ export function NavbarAuth() {
                 </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
+        <AccountSettingsDialog open={showSettings} onOpenChange={setShowSettings} />
+        </>
     );
 }

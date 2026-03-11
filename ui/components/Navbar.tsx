@@ -6,9 +6,11 @@ import { Button } from "./ui/button";
 import { Search } from "nextra/components";
 import { usePathname } from "next/navigation";
 import "nextra-theme-docs/style.css";
+import { useAuth } from "@/lib/auth-context";
 
 export function Navbar() {
   const pathname = usePathname();
+  const { user, isLoading } = useAuth();
 
   return (
     <nav className="w-full flex items-center justify-between p-6 sm:px-12 border-b border-border bg-background/80 backdrop-blur sticky top-0 z-10">
@@ -18,9 +20,9 @@ export function Navbar() {
         </span>
       </Link>
       <div className="flex items-center gap-4">
-        {pathname !== "/" && (
-          <Link href="/generate">
-            <Button>Get Started</Button>
+        {pathname !== "/" && !isLoading && (
+          <Link href={user ? "/generate" : "/"}>
+            <Button>{user ? "Generate Data" : "Get Started"}</Button>
           </Link>
         )}
         <Link href="/dashboard">

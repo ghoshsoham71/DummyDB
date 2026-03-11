@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Head } from "nextra/components";
 import "./globals.css";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Raleway } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Layout, Navbar } from "nextra-theme-docs";
@@ -14,14 +14,10 @@ export const metadata: Metadata = {
   description: "Testing",
 };
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const ralewayFont = Raleway({
+  variable: "--font-raleway",
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  weight: ["200", "300", "400", "500", "600", "700", "800", "900"],
 });
 
 import { CustomLogo } from "@/components/CustomLogo";
@@ -65,7 +61,7 @@ export default async function RootLayout({
       >
         {/* Your additional tags should be passed as `children` of `<Head>` element */}
       </Head>
-      <body className={`${geistSans.variable} ${geistMono.variable} font-geist-sans antialiased`}>
+      <body className={`${ralewayFont.variable} font-sans antialiased`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

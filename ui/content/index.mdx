@@ -1,4 +1,4 @@
-﻿---
+---
 sidebarTitle: Overview
 ---
 
@@ -13,27 +13,27 @@ sidebarTitle: Overview
 | **SQL** | `.sql` file upload | Upload a `CREATE TABLE` dump |
 | **PostgreSQL** | Supabase | Provide a Supabase connection string |
 | **NoSQL** | MongoDB | Connect via `mongodb://` URI |
-| **Graph** | Neo4j | Connect via `bolt://localhost:7687` |
+| **Graph** | Neo4j | Connect via Bolt URI |
 
 ## Architecture
 
 ```
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”     â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”     â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚   Next.js    â”‚â”€â”€â”€â”€â–¶â”‚   FastAPI     â”‚â”€â”€â”€â”€â–¶â”‚  SDV / CTGAN    â”‚
-â”‚   Frontend   â”‚â—€â”€â”€â”€â”€â”‚   Backend     â”‚â—€â”€â”€â”€â”€â”‚  HMA Synthesizerâ”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜     â””â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”˜     â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
-                             â”‚
-                   â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-                   â”‚         â”‚          â”‚
+┌─────────────┐     ┌──────────────┐     ┌─────────────────┐
+│   Next.js   │────▶│   FastAPI    │────▶│  SDV / CTGAN    │
+│   Frontend  │◀────│   Backend    │◀────│  HMA Synthesizer│
+└─────────────┘     └───────┬──────┘     └─────────────────┘
+                            │
+                  ┌─────────┼──────────┐
+                  │         │          │
               Supabase   MongoDB     Neo4j
 ```
 
 ## Quick Links
 
-- [Getting Started](/docs/getting-started) â€” install and run locally
-- [SQL Databases](/docs/sql-databases) â€” SQL file upload and Supabase
-- [MongoDB](/docs/nosql-databases) â€” NoSQL document database
-- [Neo4j](/docs/graph-databases) â€” Graph database with Cypher
-- [Synthetic Data](/docs/synthetic-data) â€” Generation templates and download
-- [Dashboard](/docs/dashboard) â€” Manage schemas, jobs, and stats
-- [API Reference](/docs/api-reference) â€” All REST endpoints
+- [Getting Started](/docs/getting-started) — install and run locally
+- [SQL Databases](/docs/sql-databases) — SQL file upload and Supabase
+- [MongoDB](/docs/nosql-databases) — NoSQL document database
+- [Neo4j](/docs/graph-databases) — Graph database with Cypher
+- [Synthetic Data](/docs/synthetic-data) — Generation templates and download
+- [Dashboard](/docs/dashboard) — Manage schemas, jobs, and stats
+- [API Reference](/docs/api-reference) — All REST endpoints

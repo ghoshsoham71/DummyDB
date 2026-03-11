@@ -11,7 +11,6 @@ from slowapi.util import get_remote_address
 # Import routers
 from src.routers.parse_router import router as parse_router
 from src.routers.schema_router import router as schema_router
-from src.routers.migration_router import router as migration_router
 from src.routers.synthetic_router import router as synthetic_router
 from src.routers.dashboard_router import router as dashboard_router
 from src.routers.auth_router import router as auth_router
@@ -29,21 +28,7 @@ async def lifespan(app: FastAPI):
     """Application lifespan manager with auto-migration on startup."""
     logger.info("Starting up BurstDB API...")
 
-    try:
-        from src.utils.migrations import migrator
-
-        migrator.migrations_dir.mkdir(exist_ok=True)
-        migrator.create_migrations_table()
-
-        auto_migrate_on_startup = False
-        if auto_migrate_on_startup:
-            result = migrator.auto_migrate()
-            if result["success"]:
-                logger.info(f"Auto-migration completed: {result['message']}")
-            else:
-                logger.warning(f"Auto-migration issue: {result['message']}")
-    except Exception as e:
-        logger.error(f"Migration init failed: {e}")
+    # Migrations removed
 
     # Start the job manager so queued jobs are actually processed
     from src.utils.job_manager import job_manager
@@ -81,7 +66,6 @@ app.add_middleware(
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(parse_router, prefix="/api/v1")
 app.include_router(schema_router, prefix="/api/v1")
-app.include_router(migration_router, prefix="/api/v1")
 app.include_router(synthetic_router, prefix="/api/v1")
 app.include_router(dashboard_router, prefix="/api/v1")
 
@@ -97,7 +81,6 @@ async def root():
             "schemas": "/api/v1/schemas",
             "generate": "/api/v1/generate",
             "dashboard": "/api/v1/dashboard",
-            "migrations": "/api/v1/migrations",
             "health": "/api/v1/health",
             "docs": "/docs",
         },
