@@ -116,6 +116,7 @@ export function GenerateSection() {
   const [templates, setTemplates] = useState<Record<string, GenerationTemplate>>({});
   const [selectedTemplate, setSelectedTemplate] = useState<string>("");
   const [savedSchemas, setSavedSchemas] = useState<SchemaListItem[]>([]);
+  const TEMPLATE_DEFAULT_VALUE = "__default__";
 
   const steps = [
     {
@@ -1004,12 +1005,17 @@ export function GenerateSection() {
               {/* Templates */}
               <div className="space-y-4">
                 <h3 className="font-medium">Generation Template</h3>
-                <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+                <Select
+                  value={selectedTemplate}
+                  onValueChange={(value) =>
+                    setSelectedTemplate(value === TEMPLATE_DEFAULT_VALUE ? "" : value)
+                  }
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a template (optional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Default</SelectItem>
+                    <SelectItem value={TEMPLATE_DEFAULT_VALUE}>Default</SelectItem>
                     {Object.entries(templates).map(([key, template]) => (
                       <SelectItem key={key} value={key}>
                         {template.name}

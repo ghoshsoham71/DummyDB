@@ -113,7 +113,7 @@ def get_all_schemas_from_db(limit: int = 50, offset: int = 0) -> List[Dict[str, 
         return []
 
 
-def update_schema_data(content_hash: str, new_schema_data: Dict[str, Any]) -> bool:
+def update_schema_data(content_hash: str, new_schema_data: Dict[str, Any], filename: str = None, file_size: int = None) -> bool:
     """Update schema data for existing content hash."""
     try:
         supabase = get_supabase_client()
@@ -122,6 +122,10 @@ def update_schema_data(content_hash: str, new_schema_data: Dict[str, Any]) -> bo
             "schema_data": new_schema_data,
             "updated_at": "now()"
         }
+        if filename is not None:
+            update_data["filename"] = filename
+        if file_size is not None:
+            update_data["file_size"] = file_size
 
         result = supabase.table("schema_parse").update(update_data).eq("content_hash", content_hash).execute()
 
