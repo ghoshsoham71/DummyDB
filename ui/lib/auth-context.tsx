@@ -27,14 +27,51 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const router = useRouter();
 
     useEffect(() => {
-        // Get initial session
+        // Helper to parse OAuth tokens from URL (hash or query)
+        const processOAuthTokens = async () => {
+            const hash = window.location.hash || "";
+            const query = window.location.search || "";
+            const urlParams = new URLSearchParams(query.replace(/^\?/, ""));
+            let accessToken = urlParams.get("access_token");
+            let refreshToken = urlParams.get("refresh_token");
+
+            if (!accessToken || !refreshToken) {
+                // Check hash, handling cases where hash has multiple parts (e.g., #generate#access_token=...)
+                const hashParts = hash.split('#').filter(Boolean);
+                const tokenPart = hashParts.length > 1 ? hashParts[hashParts.length - 1] : hash.replace(/^#/, "");
+                const hashParams = new URLSearchParams(tokenPart);
+                accessToken = hashParams.get("access_token");
+                refreshToken = hashParams.get("refresh_token");
+            }
+
+            if (accessToken && refreshToken) {
+                const { data, error } = await supabase.auth.setSession({
+                    access_token: accessToken,
+                    refresh_token: refreshToken,
+                });
+                if (error) throw error;
+                setSession(data.session ?? null);
+                setUser(data.session?.user ?? null);
+
+                // Clear tokens from URL and set hash to generate if it was the redirect target
+                const newHash = hash.includes('#generate') ? '#generate' : '';
+                window.history.replaceState({}, document.title, window.location.pathname + window.location.search + newHash);
+                return true;
+            }
+
+            return false;
+        };
+
+        // Initialize session and/or handle OAuth redirect tokens.
         const initializeAuth = async () => {
             try {
-                const { data: { session }, error } = await supabase.auth.getSession();
-                if (error) throw error;
-
-                setSession(session);
-                setUser(session?.user ?? null);
+                const handled = await processOAuthTokens();
+                if (!handled) {
+                    const { data: { session }, error } = await supabase.auth.getSession();
+                    if (error) throw error;
+                    setSession(session);
+                    setUser(session?.user ?? null);
+                }
             } catch (error) {
                 console.error("Error getting session:", error);
             } finally {
@@ -44,7 +81,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         initializeAuth();
 
-        // Listen for auth changes
+        // Some OAuth flows return tokens via hash without reloading; watch for it.
+        const onHashChange = async () => {
+            const handled = await processOAuthTokens();
+            if (handled) {
+                setIsLoading(false);
+            }
+        };
+
+        window.addEventListener("hashchange", onHashChange);
+
+        // Listen for auth state changes, including sign-in/out traps.
         const { data: authListener } = supabase.auth.onAuthStateChange(
             async (event, currentSession) => {
                 setSession(currentSession);
@@ -65,6 +112,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         return () => {
             authListener.subscription.unsubscribe();
+            window.removeEventListener("hashchange", onHashChange);
         };
     }, [router]);
 

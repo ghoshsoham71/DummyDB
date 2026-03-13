@@ -57,7 +57,7 @@ export function AuthPanel() {
             const { error } = await supabase.auth.signInWithOAuth({
                 provider,
                 options: {
-                    redirectTo: `${window.location.origin}/generate`,
+                    redirectTo: `${window.location.origin}/#generate`,
                 }
             });
             if (error) throw error;
@@ -102,7 +102,7 @@ export function AuthPanel() {
                     password,
                 });
                 if (error) throw error;
-                router.push("/generate");
+                router.push("/#generate");
             } else {
                 if (!username.trim()) throw new Error("Username is required.");
                 if (usernameAvailable === false) throw new Error("This username is already taken.");

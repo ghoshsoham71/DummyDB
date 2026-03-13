@@ -4,10 +4,6 @@ const meta = {
     title: "Home",
     display: 'hidden'
   },
-  generate: {
-    type: "page",
-    title: "Get Started",
-  },
   dashboard: {
     type: "page",
     title: "Dashboard",

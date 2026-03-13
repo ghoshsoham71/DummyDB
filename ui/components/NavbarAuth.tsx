@@ -14,17 +14,32 @@ import {
 import { LogOut, User, Settings } from "lucide-react";
 import Link from "next/link";
 import { AccountSettingsDialog } from "./AccountSettingsDialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { AuthPanel } from "./AuthPanel";
 
 export function NavbarAuth() {
     const { user, signOut, isLoading } = useAuth();
     const [showSettings, setShowSettings] = useState(false);
+    const [authDialogOpen, setAuthDialogOpen] = useState(false);
 
     if (isLoading) {
         return <div className="w-8 h-8 rounded-full border border-border animate-pulse bg-muted" />;
     }
 
     if (!user) {
-        return null;
+        return (
+            <>
+                <Button variant="outline" onClick={() => setAuthDialogOpen(true)}>
+                    Login
+                </Button>
+                <Dialog open={authDialogOpen} onOpenChange={setAuthDialogOpen}>
+                    <DialogContent className="sm:max-w-md">
+                    <DialogTitle className="sr-only">Login</DialogTitle>
+                    <AuthPanel />
+                </DialogContent>
+                </Dialog>
+            </>
+        );
     }
 
     return (

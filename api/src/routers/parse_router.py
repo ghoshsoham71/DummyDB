@@ -226,26 +226,35 @@ async def parse_sql_schema(
         )
 
 
-# ── Supabase Parse ────────────────────────────────────────────────────────────
-
-@router.post("/parse/supabase", response_model=ParseResponse)
-@limiter.limit("5/minute")
-async def parse_supabase_schema(request: Request, payload: SupabaseParseRequest, user=Depends(get_current_user)) -> ParseResponse:
-    """Connect to Supabase and extract schema."""
+# ── JSON Schema Parse (from editor) ───────────────────────────────────────────
+@router.post("/parse/json", response_model=ParseResponse)
+@limiter.limit("10/minute")
+async def parse_json_schema(
+    request: Request,
+    payload: Dict[str, Any],
+    save_to_disk: bool = Query(True),
+    overwrite_existing: bool = Query(False),
+    filename: str = Query("schema.json"),
+    user=Depends(get_current_user),
+) -> ParseResponse:
+    """Accept a JSON schema payload and store it so it can be used for generation."""
     start_time = time.time()
     try:
-        extractor = SupabaseExtractor(payload.connection_string)
-        schema = extractor.extract_schema()
+        # Payload can either be {"schema": {...}} or the schema object directly
+        schema = payload.get("schema") if isinstance(payload, dict) and "schema" in payload else payload
+
+        if not isinstance(schema, dict):
+            raise ValueError("Schema must be a JSON object")
 
         if not schema_manager.validate_schema_content(schema):
-            raise ValueError("Invalid schema from Supabase")
+            raise ValueError("Invalid schema structure")
 
         schema_json = json.dumps(schema, sort_keys=True)
         content_hash = schema_manager.generate_content_hash(schema_json)
         schema_id = schema_manager.generate_schema_id(schema_json)
 
         try:
-            if check_schema_exists_by_hash(content_hash) and not payload.overwrite_existing:
+            if check_schema_exists_by_hash(content_hash) and not overwrite_existing:
                 return ParseResponse(
                     success=True, schema_id=schema_id,
                     message="Schema already exists.",
@@ -254,6 +263,47 @@ async def parse_supabase_schema(request: Request, payload: SupabaseParseRequest,
                 )
         except Exception:
             pass
+
+        if schema_id in PARSED_SCHEMAS and not overwrite_existing:
+            return ParseResponse(
+                success=True, schema_id=schema_id,
+                message="Schema already exists in memory.",
+                processing_time=time.time() - start_time,
+                statistics={"duplicate": True}, file_path=PARSED_SCHEMAS[schema_id].get("file_path"),
+            )
+
+        file_path = _store_schema(
+            schema, schema_id, content_hash,
+            filename, schema_json.encode("utf-8"), "json_schema", save_to_disk,
+            user_id=user.id,
+        )
+
+        stats = _compute_stats(schema, {
+            "schema_id": schema_id,
+            "content_hash": content_hash,
+            "duplicate": False,
+        })
+
+        return ParseResponse(
+            success=True, schema_id=schema_id,
+            message=f"Schema stored successfully. ID: {schema_id}",
+            processing_time=time.time() - start_time,
+            statistics=stats,
+            data=json.dumps(schema),
+            file_path=file_path,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"JSON schema parse failed: {e}")
+        return ParseResponse(
+            success=False, schema_id=None,
+            message=f"Failed: {e}",
+            processing_time=time.time() - start_time,
+            statistics={}, file_path=None,
+        )
+
 
         if schema_id in PARSED_SCHEMAS and not payload.overwrite_existing:
             return ParseResponse(

@@ -11,7 +11,7 @@ export function CustomLogo() {
         <span
             onClick={(e) => {
                 e.preventDefault();
-                router.push(user ? "/generate" : "/");
+                router.push(user ? "/#generate" : "/");
             }}
             className="flex flex-row items-center gap-2 cursor-pointer group"
         >

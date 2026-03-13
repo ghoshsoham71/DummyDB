@@ -7,6 +7,7 @@ import { Search } from "nextra/components";
 import { usePathname } from "next/navigation";
 import "nextra-theme-docs/style.css";
 import { useAuth } from "@/lib/auth-context";
+import { NavbarAuth } from "./NavbarAuth";
 
 export function Navbar() {
   const pathname = usePathname();
@@ -21,18 +22,19 @@ export function Navbar() {
       </Link>
       <div className="flex items-center gap-4">
         {pathname !== "/" && !isLoading && (
-          <Link href={user ? "/generate" : "/"}>
+          <Link href={user ? "/#generate" : "/"}>
             <Button>{user ? "Generate Data" : "Get Started"}</Button>
           </Link>
         )}
         <Link href="/dashboard">
           <Button variant="outline">Dashboard</Button>
         </Link>
-        <Link href="/docs">
+        <a href="/docs" target="_blank" rel="noopener noreferrer">
           <Button variant="outline">Docs</Button>
-        </Link>
+        </a>
         <Search />
         <ModeToggle />
+        <NavbarAuth />
       </div>
     </nav>
   );

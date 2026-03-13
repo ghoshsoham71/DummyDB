@@ -165,6 +165,14 @@ export async function parseMongoDB(connectionString: string, databaseName?: stri
   });
 }
 
+export async function parseJsonSchema(schema: Record<string, unknown>, filename = "schema.json") {
+  return apiFetch<Record<string, unknown>>("/parse/json", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ schema, filename, save_to_disk: true, overwrite_existing: true }),
+  });
+}
+
 export async function parseNeo4j(uri: string, username: string, password: string, database?: string) {
   return apiFetch<Record<string, unknown>>("/parse/neo4j", {
     method: "POST",
