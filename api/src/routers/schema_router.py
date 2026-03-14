@@ -22,56 +22,37 @@ limiter = Limiter(key_func=get_remote_address)
 @router.get("/schemas")
 @limiter.limit("50/minute")
 async def list_schemas(
-    request: Request,
-    limit: int = Query(50, ge=1, le=100),
-    offset: int = Query(0, ge=0),
-    sort_by: str = Query("created_at"),
-    sort_order: str = Query("desc"),
-    search: Optional[str] = Query(None),
-    user=Depends(get_current_user),
+    request: Request, limit: int = Query(50, ge=1, le=100), offset: int = Query(0, ge=0),
+    sort_by: str = Query("created_at"), sort_order: str = Query("desc"),
+    search: Optional[str] = Query(None), user=Depends(get_current_user),
 ):
     """List schemas with pagination, sorting, and search (user-scoped)."""
-    user_schemas = get_user_schemas(user.id)
+    items = _filter_and_sort_schemas(get_user_schemas(user.id), search, sort_by, sort_order)
+    paginated = items[offset:offset + limit]
+    return {
+        "schemas": _format_paginated_schemas(paginated), "total": len(items),
+        "pagination": {"offset": offset, "limit": limit, "has_more": offset + limit < len(items)},
+    }
+
+def _filter_and_sort_schemas(user_schemas, search, sort_by, sort_order) -> list:
     filtered = user_schemas
     if search:
-        filtered = {
-            k: v for k, v in user_schemas.items()
-            if search.lower() in v["filename"].lower()
-        }
-
+        filtered = {k: v for k, v in user_schemas.items() if search.lower() in v["filename"].lower()}
     sort_map = {
         "created_at": lambda x: x[1]["created_at"],
         "filename": lambda x: x[1]["filename"].lower(),
         "file_size": lambda x: x[1]["file_size"],
     }
+    key_func = sort_map.get(sort_by, lambda x: x[0])
+    return sorted(filtered.items(), key=key_func, reverse=(sort_order == "desc"))
 
-    if sort_by in sort_map:
-        sorted_items = sorted(filtered.items(), key=sort_map[sort_by], reverse=(sort_order == "desc"))
-    else:
-        sorted_items = list(filtered.items())
-
-    paginated: List[Any] = sorted_items[offset:offset + limit]
-
-    schema_list = []
-    for sid, sdata in paginated:
-        schema_list.append({
-            "schema_id": sid,
-            "filename": sdata["filename"],
-            "created_at": sdata["created_at"],
-            "file_size": sdata["file_size"],
-            "content_hash": sdata.get("content_hash", ""),
-            "table_count": sum(len(db.get("tables", [])) for db in sdata["schema"].get("databases", [])),
-            "metadata": sdata.get("metadata", {}),
-        })
-
-    return {
-        "schemas": schema_list,
-        "total": len(filtered),
-        "pagination": {
-            "offset": offset, "limit": limit,
-            "has_more": offset + limit < len(filtered),
-        },
-    }
+def _format_paginated_schemas(items: list) -> list:
+    return [{
+        "schema_id": sid, "filename": s["filename"], "created_at": s["created_at"],
+        "file_size": s["file_size"], "content_hash": s.get("content_hash", ""),
+        "table_count": sum(len(db.get("tables", [])) for db in s["schema"].get("databases", [])),
+        "metadata": s.get("metadata", {}),
+    } for sid, s in items]
 
 
 @router.get("/schemas/{schema_id}")
@@ -193,53 +174,33 @@ async def bulk_delete_schemas(
 @limiter.limit("50/minute")
 async def get_table_details(request: Request, schema_id: str, table_name: str, user=Depends(get_current_user)):
     """Get detailed information about a specific table (user-scoped)."""
-    if schema_id not in PARSED_SCHEMAS:
-        raise HTTPException(status_code=404, detail=f"Schema '{schema_id}' not found")
-    if PARSED_SCHEMAS[schema_id].get("user_id") != user.id:
-        raise HTTPException(status_code=404, detail=f"Schema '{schema_id}' not found")
+    if schema_id not in PARSED_SCHEMAS or PARSED_SCHEMAS[schema_id].get("user_id") != user.id:
+        raise HTTPException(status_code=404, detail="Schema not found")
+    table, db_name = _find_table_in_schema(PARSED_SCHEMAS[schema_id]["schema"], table_name)
+    if not table: raise HTTPException(status_code=404, detail=f"Table '{table_name}' not found")
+    return {
+        "schema_id": schema_id, "database": db_name, "table": table,
+        "analysis": _analyze_table_constraints(table.get("attributes", []))
+    }
 
-    schema = PARSED_SCHEMAS[schema_id]["schema"]
-    found_table = None
-    found_database = None
+def _find_table_in_schema(schema: dict, table_name: str):
+    for db in schema.get("databases", []):
+        for t in db.get("tables", []):
+            if t["name"].lower() == table_name.lower():
+                return t, db["name"]
+    return None, None
 
-    for database in schema.get("databases", []):
-        for table in database.get("tables", []):
-            if table["name"].lower() == table_name.lower():
-                found_table = table
-                found_database = database["name"]
-                break
-        if found_table:
-            break
-
-    if not found_table:
-        raise HTTPException(status_code=404, detail=f"Table '{table_name}' not found")
-
-    attributes: List[Dict[str, Any]] = found_table.get("attributes", [])
-    primary_keys = [a["name"] for a in attributes if "PRIMARY_KEY" in a.get("constraints", [])]
-    unique_cols = [a["name"] for a in attributes if "UNIQUE" in a.get("constraints", [])]
-    nullable_cols = [a["name"] for a in attributes if "NOT_NULL" not in a.get("constraints", [])]
-
-    foreign_keys = []
-    for attr in attributes:
-        for c in attr.get("constraints", []):
+def _analyze_table_constraints(attributes: list) -> dict:
+    fks = []
+    for a in attributes:
+        for c in a.get("constraints", []):
             if c.startswith("FOREIGN_KEY_REFERENCES_"):
                 ref = c.replace("FOREIGN_KEY_REFERENCES_", "").split(".")
-                if len(ref) == 2:
-                    foreign_keys.append({
-                        "column": attr["name"],
-                        "references_table": ref[0],
-                        "references_column": ref[1],
-                    })
-
+                if len(ref) == 2: fks.append({"column": a["name"], "references_table": ref[0], "references_column": ref[1]})
     return {
-        "schema_id": schema_id,
-        "database": found_database,
-        "table": found_table,
-        "analysis": {
-            "total_columns": len(attributes),
-            "primary_keys": primary_keys,
-            "foreign_keys": foreign_keys,
-            "unique_columns": unique_cols,
-            "nullable_columns": nullable_cols,
-        },
+        "total_columns": len(attributes),
+        "primary_keys": [a["name"] for a in attributes if "PRIMARY_KEY" in a.get("constraints", [])],
+        "foreign_keys": fks,
+        "unique_columns": [a["name"] for a in attributes if "UNIQUE" in a.get("constraints", [])],
+        "nullable_columns": [a["name"] for a in attributes if "NOT_NULL" not in a.get("constraints", [])]
     }

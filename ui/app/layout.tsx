@@ -6,8 +6,8 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Layout, Navbar } from "nextra-theme-docs";
 import { getPageMap } from "nextra/page-map";
-import { Footer } from "@/components/Footer";
-import { ModeToggle } from "@/components/ModeToggle";
+import { Footer } from "@/components/layout/Footer";
+import { ModeToggle } from "@/components/shared/ModeToggle";
 import "nextra-theme-docs/style.css";
 export const metadata: Metadata = {
   title: "BurstDB",
@@ -20,7 +20,7 @@ const ralewayFont = Raleway({
   weight: ["200", "300", "400", "500", "600", "700", "800", "900"],
 });
 
-import { CustomLogo } from "@/components/CustomLogo";
+import { CustomLogo } from "@/components/layout/CustomLogo";
 
 const navbar = (
   <Navbar
@@ -45,9 +45,9 @@ const sidebar = {
 };
 
 import { AuthProvider } from "@/lib/auth-context";
-import { NavbarAuth } from "@/components/NavbarAuth";
-import { ConditionalSearch } from "@/components/ConditionalSearch";
-import { HideNavLinks } from "@/components/HideNavLinks";
+import { NavbarAuth } from "@/components/layout/NavbarAuth";
+import { ConditionalSearch } from "@/components/shared/ConditionalSearch";
+import { HideNavLinks } from "@/components/layout/HideNavLinks";
 
 export default async function RootLayout({
   children,

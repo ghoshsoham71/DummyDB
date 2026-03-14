@@ -1,7 +1,7 @@
 # api/src/lib/schemas.py (Enhanced version)
 
-from pydantic import BaseModel, Field, ConfigDict, validator
-from typing import Dict, List, Optional, Any, Union
+from pydantic import BaseModel, Field, ConfigDict
+from typing import Dict, List, Optional, Any
 from enum import Enum
 from datetime import datetime
 
@@ -75,15 +75,7 @@ class HealthResponse(BaseModel):
     schemas_in_memory: int
     additional_info: Optional[Dict[str, Any]] = None
 
-# Synthetic Data Generation Schemas
-class SyntheticGenerationRequest(BaseModel):
-    schema_id: str
-    scale_factor: float = Field(default=2.0, ge=0.1, le=100.0)
-    num_rows: Optional[Dict[str, int]] = None
-    synthesizer_type: str = Field(default="HMA", pattern="^(HMA|GAUSSIAN|CTGAN)$")
-    output_format: str = Field(default="csv", pattern="^(csv|json|parquet)$")
-    seed: Optional[int] = None
-
+# SyntheticGenerationResponse used by synthetic_router.py
 class SyntheticGenerationResponse(BaseModel):
     success: bool
     generation_id: Optional[str] = None
@@ -93,14 +85,7 @@ class SyntheticGenerationResponse(BaseModel):
     file_paths: List[str] = Field(default_factory=list)
     quality_score: Optional[float] = None
 
-# Seed Data Generation Schemas
-class SeedDataRequest(BaseModel):
-    schema_id: str
-    base_rows: int = Field(default=10, ge=1, le=10000)
-    locale: str = Field(default="en_US")
-    custom_generators: Optional[Dict[str, Dict[str, Any]]] = None
-    output_format: str = Field(default="csv", pattern="^(csv|json)$")
-
+# SeedDataResponse used by seed_data_router.py
 class SeedDataResponse(BaseModel):
     success: bool
     seed_id: Optional[str] = None
@@ -126,13 +111,7 @@ class EvaluationResponse(BaseModel):
     report_path: Optional[str] = None
     summary: Dict[str, Any] = Field(default_factory=dict)
 
-# Data Pipeline Schemas
-class PipelineRequest(BaseModel):
-    schema_id: str
-    pipeline_name: str
-    steps: List[str] = Field(default=["seed_generation", "synthetic_generation", "evaluation"])
-    config: Dict[str, Any] = Field(default_factory=dict)
-
+# PipelineResponse kept if referenced elsewhere, but request removed
 class PipelineResponse(BaseModel):
     success: bool
     pipeline_id: Optional[str] = None
@@ -177,23 +156,7 @@ class QualityMetrics(BaseModel):
     correlation_preservation: float = Field(ge=0.0, le=1.0)
     privacy_score: Optional[float] = Field(None, ge=0.0, le=1.0)
 
-# Batch Processing Schemas
-class BatchProcessRequest(BaseModel):
-    schema_ids: List[str]
-    operation_type: str = Field(pattern="^(seed|synthetic|evaluate|pipeline)$")
-    config: Dict[str, Any] = Field(default_factory=dict)
-    parallel: bool = True
-    max_workers: int = Field(default=4, ge=1, le=10)
-
-class BatchProcessResponse(BaseModel):
-    success: bool
-    batch_id: str
-    message: str
-    total_jobs: int
-    successful_jobs: int
-    failed_jobs: int
-    job_results: List[Dict[str, Any]] = Field(default_factory=list)
-    processing_time: float
+# Batch processing and system stats removed
 
 # Statistics and Monitoring Schemas
 class SystemStats(BaseModel):

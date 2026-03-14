@@ -8,7 +8,7 @@ import logging
 from functools import lru_cache
 
 from fastapi import APIRouter, HTTPException, Depends, Request
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from supabase import create_client, Client
 from dotenv import load_dotenv
 

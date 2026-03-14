@@ -15,7 +15,7 @@ import {
   type SchemaListItem, type JobItem, type DashboardOverview, type ActivityEvent,
 } from "@/lib/api";
 
-import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 function statusBadge(status: string) {
   const icons: Record<string, React.ReactNode> = {

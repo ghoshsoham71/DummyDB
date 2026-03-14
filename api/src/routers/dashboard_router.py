@@ -3,7 +3,6 @@ Dashboard Router
 Aggregated analytics and activity endpoints for the BurstDB dashboard.
 """
 import logging
-import time
 from typing import Dict, Any, List
 from datetime import datetime, timezone
 
@@ -12,9 +11,9 @@ from fastapi.responses import JSONResponse
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from src.utils.job_manager import job_manager, JobType
-from src.utils.file_manager import file_manager
-from src.services.schema_store import PARSED_SCHEMAS, get_user_schemas
+from src.services.job_service import job_manager
+from src.services.file_service import file_manager
+from src.services.schema_store import get_user_schemas
 from src.lib.auth import get_current_user
 
 logger = logging.getLogger(__name__)

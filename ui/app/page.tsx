@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { TypingText } from "@/components/TypingText";
+import { TypingText } from "@/components/shared/TypingText";
 import { GenerateSection } from "@/components/GenerateSection";
 
 export default function Home() {

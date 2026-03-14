@@ -11,6 +11,7 @@ interface AuthContextType {
     session: Session | null;
     isLoading: boolean;
     signOut: () => Promise<void>;
+    signInWithGoogle: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -18,6 +19,7 @@ const AuthContext = createContext<AuthContextType>({
     session: null,
     isLoading: true,
     signOut: async () => { },
+    signInWithGoogle: async () => { },
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -124,8 +126,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
     };
 
+    const signInWithGoogle = async () => {
+        try {
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: "google",
+                options: {
+                    redirectTo: `${window.location.origin}`,
+                },
+            });
+            if (error) throw error;
+        } catch (error) {
+            console.error("Error signing in with Google:", error);
+        }
+    };
+
     return (
-        <AuthContext.Provider value={{ user, session, isLoading, signOut }}>
+        <AuthContext.Provider value={{ user, session, isLoading, signOut, signInWithGoogle }}>
             {children}
         </AuthContext.Provider>
     );
