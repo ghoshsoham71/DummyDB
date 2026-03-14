@@ -12,8 +12,8 @@ from pydantic import BaseModel
 from supabase import create_client, Client
 from dotenv import load_dotenv
 
-from src.lib.auth import get_current_user
-from src.lib.supabase_client import get_supabase_client
+from ..lib.auth import get_current_user
+from ..lib.supabase_client import get_supabase_client
 
 load_dotenv()
 logger = logging.getLogger(__name__)

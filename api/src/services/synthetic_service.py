@@ -1,55 +1,83 @@
 import logging
+import pandas as pd
 from typing import Dict, Any, Optional
-from pathlib import Path
-from pydantic import BaseModel
-from src.services.job_service import job_manager, JobType
-from src.services.schema_store import get_schema_by_id
+from .job_service import job_manager, JobType
+from .schema_store import get_schema_by_id
+from ..utils.seeding_engine import SeedingEngine, ConstraintGraph
+from ..utils.ml.models import ModelRegistry
+from ..utils.arrow_utils import save_data_arrow
 
 logger = logging.getLogger(__name__)
 
-class GenerateRequest(BaseModel):
-    schema_id: str
-    scale_factor: float = 2.0
-    num_rows: Optional[Dict[str, int]] = None
-    synthesizer_type: str = "HMA"
-    output_format: str = "csv"
-    seed: Optional[int] = None
+def register_synthetic_handler():
+    """Register synthetic generation handlers (currently handled directly in job_service)."""
+    pass
 
 def synthetic_generation_handler(params: Dict[str, Any], cb=None) -> Dict[str, Any]:
-    """Handler for synthetic data generation jobs."""
+    """Modernized handler using ML pipeline and Arrow."""
     try:
-        schema = _load_generate_schema(params, cb)
-        out_dir = params.get("output_dir", f"synthetic_data/{params['schema_id']}")
-        res_data = _run_mock_gen(schema, params, cb)
-        from src.utils.mock_data_generator import save_mock_data_csv
-        paths = save_mock_data_csv(res_data, out_dir)
-        if cb: cb(100, "Complete!")
-        return _format_synth_resp(res_data, out_dir, paths, params)
+        schema_id = params["schema_id"]
+        s_data = get_schema_by_id(schema_id)
+        if not s_data: raise Exception("Schema not found")
+        schema = s_data["schema"]
+        
+        # 1. Build Constraint Graph & Get Order
+        if cb: cb(10, "Building constraint graph...")
+        cg = ConstraintGraph(schema)
+        order = cg.get_generation_order()
+        
+        # 2. LLM Seeding
+        if cb: cb(20, "Generating seed rows via LLM (DSPy)...")
+        seeder = SeedingEngine()
+        seed_data = {}
+        for t_name in order:
+            cols = next(t for db in schema["databases"] for t in db["tables"] if t["name"] == t_name)["attributes"]
+            seed_data[t_name] = seeder.generate_seed_rows(t_name, cols, 50)
+            
+        # 3. Bulk Scaling via Generative ML
+        if cb: cb(50, "Scaling data via Generative ML...")
+        registry = ModelRegistry()
+        final_data = {}
+        scale_factor = params.get("scale_factor", 2.0)
+        
+        for t_name, seeds in seed_data.items():
+            if not seeds: continue
+            df_seeds = pd.DataFrame(seeds)
+            model_type = registry.select_best_model(df_seeds)
+            model = registry.get_model(model_type)
+            
+            model.train(df_seeds)
+            num_rows = int(len(seeds) * scale_factor)
+            final_data[t_name] = model.generate(num_rows).to_dict('records')
+            
+        # 4. Save via Arrow
+        if cb: cb(90, "Finalizing and saving via Apache Arrow...")
+        out_dir = f"synthetic_data/{schema_id}"
+        paths = save_data_arrow(final_data, out_dir, format=params.get("output_format", "csv"))
+        
+        # 5. Quality & Privacy Audit
+        from src.utils.quality_engine import QualityEngine, PrivacyEngine
+        audit_results = {}
+        qe = QualityEngine()
+        pe = PrivacyEngine()
+        
+        for t_name, rows in final_data.items():
+            if t_name in seed_data:
+                df_real = pd.DataFrame(seed_data[t_name])
+                df_synth = pd.DataFrame(rows)
+                audit_results[t_name] = {
+                    "quality": qe.audit_quality(df_real, df_synth),
+                    "privacy": pe.audit_privacy(df_real, df_synth)
+                }
+        
+        if cb: cb(100, "Generation & Audit complete!")
+        return {
+            "success": True,
+            "output_directory": out_dir,
+            "file_paths": paths,
+            "order": order,
+            "audit": audit_results
+        }
     except Exception as e:
-        logger.error(f"Generation failed: {e}"); raise
-
-def _load_generate_schema(params: dict, cb) -> dict:
-    if cb: cb(10, "Loading schema...")
-    s_data = get_schema_by_id(params["schema_id"])
-    if not s_data: raise Exception("Schema not found")
-    return s_data["schema"]
-
-def _run_mock_gen(schema: dict, params: dict, cb) -> dict:
-    s_id = params["schema_id"]
-    s_dir = params.get("seed_data_dir", f"seed_data/{s_id}")
-    has_seed = Path(s_dir).exists() and any(Path(s_dir).glob("*.csv"))
-    if cb: cb(20, "Generating..." if not has_seed else "Using seeds...")
-    from src.utils.mock_data_generator import generate_mock_data
-    return generate_mock_data(schema=schema, num_rows=params.get("num_rows", {}), skip_rate_limit=has_seed)
-
-def _format_synth_resp(data: dict, out_dir: str, paths: list, params: dict) -> dict:
-    summary = {t: {"rows": len(r), "columns": len(r[0]) if r else 0} for t, r in data.items()}
-    return {
-        "success": True, "output_directory": out_dir, "file_paths": paths,
-        "generation_summary": summary, "synthesizer_type": "groq-llm",
-        "scale_factor": params.get("scale_factor", 2.0)
-    }
-
-def register_synthetic_handler():
-    """Register the synthetic generation handler with job manager"""
-    job_manager.register_handler(JobType.SYNTHETIC_GENERATION, synthetic_generation_handler)
+        logger.error(f"Generation failed: {e}")
+        raise

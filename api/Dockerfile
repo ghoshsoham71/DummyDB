@@ -11,21 +11,21 @@ RUN apt-get update && apt-get install -y \
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin:$PATH"
 
-# Copy requirements
-COPY requirements.txt .
+# Copy project files
+COPY pyproject.toml uv.lock ./
 
-# Install Python dependencies
-RUN uv pip install --system -r requirements.txt
+# Install Python dependencies using uv
+RUN uv sync --no-dev
 
 # Copy application code
-COPY . .
+COPY src ./src
 
 # Expose port
 EXPOSE 8000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/v1/health || exit 1
+    CMD curl -f http://localhost:8000/health || exit 1
 
 # Run the application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uv", "run", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -14,6 +14,8 @@ from .routers.schema_router import router as schema_router
 from .routers.synthetic_router import router as synthetic_router
 from .routers.dashboard_router import router as dashboard_router
 from .routers.auth_router import router as auth_router
+from .db.models import Base
+from .db.session import engine
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -25,20 +27,12 @@ limiter = Limiter(key_func=get_remote_address)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan manager with auto-migration on startup."""
+    """Application lifespan manager."""
     logger.info("Starting up BurstDB API...")
-
-    # Migrations removed
-
-    # Start the job manager so queued jobs are actually processed
-    from .services.job_service import job_manager
-    job_manager.start()
-    logger.info("Job manager started")
-
+    # Initialize DB (Dev only, use migrations for prod)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
     yield
-
-    # Graceful shutdown
-    job_manager.stop()
     logger.info("Shutting down BurstDB API...")
 
 
@@ -56,7 +50,7 @@ app.state.limiter = limiter
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -68,6 +62,8 @@ app.include_router(parse_router, prefix="/api/v1")
 app.include_router(schema_router, prefix="/api/v1")
 app.include_router(synthetic_router, prefix="/api/v1")
 app.include_router(dashboard_router, prefix="/api/v1")
+from .routers.jobs_router import router as jobs_router
+app.include_router(jobs_router, prefix="/api/v1")
 
 
 @app.get("/")

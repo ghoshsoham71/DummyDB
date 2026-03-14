@@ -43,7 +43,11 @@ export function AuthPanel() {
     const handleAuth = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true); setError(null);
-        if (!captchaToken) { setError("Please complete CAPTCHA"); setLoading(false); return; }
+        if (!captchaToken && process.env.NODE_ENV === "production") {
+            setError("Please complete CAPTCHA");
+            setLoading(false);
+            return;
+        }
         try {
             if (isLogin) {
                 const { error } = await supabase.auth.signInWithPassword({ email, password });

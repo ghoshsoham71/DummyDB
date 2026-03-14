@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { ApiResponse } from "./types";
 import { parseSQL, parseSupabase, parseMongoDB, parseNeo4j, SchemaListItem } from "@/lib/api";
+import { VisualSchemaBuilder } from "./VisualSchemaBuilder";
 
 export const schemaFormSchema = z.object({
   databaseType: z.enum(["sql", "supabase", "nosql", "graph"]),
@@ -104,6 +105,11 @@ export function SchemaStage({
               <SelectTrigger><SelectValue placeholder="Select schema" /></SelectTrigger>
               <SelectContent>{savedSchemas.map(s => <SelectItem key={s.schema_id} value={s.schema_id}>{s.filename}</SelectItem>)}</SelectContent>
             </Select>
+          )}
+          {schemaSource === "builder" && (
+            <div className="pt-4 border-t mt-4">
+               <VisualSchemaBuilder onSave={(schema) => onSchemaParsed(schema)} />
+            </div>
           )}
         </form>
       </Form>

@@ -3,7 +3,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from src.lib.supabase_client import get_supabase_client
+from .supabase_client import get_supabase_client
 
 
 def insert_schema(schema_data: Dict[str, Any], filename: str, content_hash: str, file_size: int) -> bool:
@@ -21,13 +21,13 @@ def insert_schema(schema_data: Dict[str, Any], filename: str, content_hash: str,
             "created_at": "now()",
         }
 
-        result = supabase.table("schema_parse").insert(insert_data).execute()
+        result = supabase.table("schema_parse").upsert(insert_data, on_conflict="content_hash").execute()
 
         if result.data:
-            logger.info(f"Successfully inserted schema with hash {content_hash} into database")
+            logger.info(f"Successfully upserted schema with hash {content_hash} into database")
             return True
         else:
-            logger.error(f"Failed to insert schema into database: {result}")
+            logger.error(f"Failed to upsert schema into database: {result}")
             return False
 
     except Exception as e:
@@ -111,12 +111,12 @@ def get_all_schemas_from_db(limit: int = 50, offset: int = 0) -> List[Dict[str, 
         return []
 
 
-def update_schema_data(content_hash: str, new_schema_data: Dict[str, Any], filename: str = None, file_size: int = None) -> bool:
+def update_schema_data(content_hash: str, new_schema_data: Dict[str, Any], filename: Optional[str] = None, file_size: Optional[int] = None) -> bool:
     """Update schema data for existing content hash."""
     try:
         supabase = get_supabase_client()
 
-        update_data = {
+        update_data: Dict[str, Any] = {
             "schema_data": new_schema_data,
             "updated_at": "now()"
         }

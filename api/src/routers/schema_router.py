@@ -10,8 +10,8 @@ from fastapi import APIRouter, HTTPException, Request, Query, Depends
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from src.services.schema_store import PARSED_SCHEMAS, get_user_schemas
-from src.lib.auth import get_current_user
+from ..services.schema_store import PARSED_SCHEMAS, get_user_schemas
+from ..lib.auth import get_current_user
 
 logger = logging.getLogger(__name__)
 

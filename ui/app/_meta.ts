@@ -4,10 +4,13 @@ const meta = {
     title: "Home",
     display: 'hidden'
   },
+  studio: {
+    type: "page",
+    title: "Studio",
+  },
   dashboard: {
     type: "page",
     title: "Dashboard",
-    display: "hidden",
   },
   docs: {
     type: "page",

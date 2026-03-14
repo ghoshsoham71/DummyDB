@@ -11,10 +11,10 @@ from fastapi.responses import JSONResponse
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from src.services.job_service import job_manager
-from src.services.file_service import file_manager
-from src.services.schema_store import get_user_schemas
-from src.lib.auth import get_current_user
+from ..services.job_service import job_manager
+from ..services.file_service import file_manager
+from ..services.schema_store import get_user_schemas
+from ..lib.auth import get_current_user
 
 logger = logging.getLogger(__name__)
 

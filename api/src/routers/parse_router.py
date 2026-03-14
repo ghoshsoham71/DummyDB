@@ -4,10 +4,10 @@ import logging
 from fastapi import APIRouter, HTTPException, Request, Depends, Query, UploadFile, File
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-from src.lib.schemas import ParseResponse, HealthResponse
-from src.services.schema_store import PARSED_SCHEMAS, MAX_FILE_SIZE, schema_manager
-from src.lib.auth import get_current_user
-from src.utils.sql.parser import SQLSchemaParser
+from ..lib.schemas import ParseResponse, HealthResponse
+from ..services.schema_store import PARSED_SCHEMAS, MAX_FILE_SIZE, schema_manager
+from ..lib.auth import get_current_user
+from ..utils.sql.parser import SQLSchemaParser
 from .parse.helpers import compute_stats, store_schema
 
 logger = logging.getLogger(__name__)

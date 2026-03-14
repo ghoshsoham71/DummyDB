@@ -1,6 +1,6 @@
 import { supabase } from "./supabase";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/v1";
 
 /* ─── Types ─── */
 
@@ -105,6 +105,12 @@ export async function apiFetch<T>(path: string, opts?: RequestInit): Promise<T> 
   if (session?.access_token) {
     headers.set("Authorization", `Bearer ${session.access_token}`);
   }
+
+  let displayBody = opts?.body;
+  if (typeof opts?.body === 'string') {
+    try { displayBody = JSON.parse(opts.body); } catch (e) { /* ignore parse error */ }
+  }
+  console.log(`[API Fetch] ${opts?.method || 'GET'} ${path}`, displayBody || '');
 
   const res = await fetch(`${API_BASE}${path}`, {
     ...opts,

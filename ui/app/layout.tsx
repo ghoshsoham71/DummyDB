@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Head } from "nextra/components";
 import "./globals.css";
 import { Raleway } from "next/font/google";
+import { Providers } from "@/components/providers";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Layout, Navbar } from "nextra-theme-docs";
@@ -62,33 +63,21 @@ export default async function RootLayout({
         {/* Your additional tags should be passed as `children` of `<Head>` element */}
       </Head>
       <body className={`${ralewayFont.variable} font-sans antialiased`}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <ConditionalSearch />
-          <HideNavLinks />
-          <TooltipProvider>
-            <AuthProvider>
-              <Layout
-                navbar={navbar}
-                pageMap={await getPageMap()}
-                docsRepositoryBase="https://github.com/ghoshsoham71/BurstDB/tree/main/ui"
-                footer={footer}
-                // editLink={null}
-                feedback={feedback}
-                darkMode={false}
-                sidebar={sidebar}
-
-              // ... Your additional layout options
-              >
-                {children}
-              </Layout>
-            </AuthProvider>
-          </TooltipProvider>
-        </ThemeProvider>
+          <Providers>
+            <ConditionalSearch />
+            <HideNavLinks />
+            <Layout
+              navbar={navbar}
+              pageMap={await getPageMap()}
+              docsRepositoryBase="https://github.com/ghoshsoham71/BurstDB/tree/main/ui"
+              footer={footer}
+              feedback={feedback}
+              darkMode={false}
+              sidebar={sidebar}
+            >
+              {children}
+            </Layout>
+          </Providers>
       </body>
     </html>
   );

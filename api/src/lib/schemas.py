@@ -94,6 +94,12 @@ class SeedDataResponse(BaseModel):
     statistics: Dict[str, Any] = Field(default_factory=dict)
     file_paths: List[str] = Field(default_factory=list)
 
+class GenerateRequest(BaseModel):
+    schema_id: str
+    num_rows: Optional[Dict[str, int]] = None
+    scale_factor: Optional[float] = 2.0
+    output_format: str = "csv"
+
 # Data Evaluation Schemas
 class EvaluationRequest(BaseModel):
     real_data_dir: str
