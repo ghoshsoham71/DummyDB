@@ -10,9 +10,9 @@ import {
   BarChart3, Globe, Search
 } from "lucide-react";
 import {
-  listSchemas, listJobs, deleteSchema,
+  listSchemas, deleteSchema,
   getDashboardOverview, getDashboardActivity,
-  type SchemaListItem, type JobItem, type DashboardOverview, type ActivityEvent,
+  type SchemaListItem, type DashboardOverview, type ActivityEvent,
 } from "@/lib/api";
 
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
