@@ -5,13 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
-  Database, Trash2, Download, XCircle, RefreshCw,
+  Trash2, Download, XCircle, RefreshCw,
   CheckCircle2, Clock, AlertCircle, Loader2, Activity,
-  HardDrive, BarChart3, FileText, Globe, Search, ArrowUpDown, ChevronRight, Plus
+  BarChart3, Globe, Search
 } from "lucide-react";
 import {
-  listSchemas, listJobs, deleteSchema, bulkDeleteSchemas,
-  cancelJob, getDownloadUrl, getDashboardOverview, getDashboardActivity,
+  listSchemas, listJobs, deleteSchema,
+  getDashboardOverview, getDashboardActivity,
   type SchemaListItem, type JobItem, type DashboardOverview, type ActivityEvent,
 } from "@/lib/api";
 
@@ -54,10 +54,8 @@ function timeAgo(d: string | number) {
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<"overview" | "explorer" | "fidelity">("overview");
   const [schemas, setSchemas] = useState<SchemaListItem[]>([]);
-  const [jobs, setJobs] = useState<JobItem[]>([]);
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
   const [activity, setActivity] = useState<ActivityEvent[]>([]);
-  const [schemaSearch, setSchemaSearch] = useState("");
   const [explorerSearch, setExplorerSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -70,24 +68,16 @@ export default function DashboardPage() {
       { id: 3, name: "Bob Johnson", email: "bob@example.com", age: 45, city: "Paris", fidelity: 0.91 },
   ];
 
-  const mockFidelityData = [
-    { name: "Age", real: 0.85, synthetic: 0.82 },
-    { name: "Income", real: 0.75, synthetic: 0.70 },
-    { name: "Location", real: 0.95, synthetic: 0.92 },
-    { name: "Balance", real: 0.65, synthetic: 0.68 },
-  ];
-
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [ov, act, sch, jb] = await Promise.allSettled([
+      const [ov, act, sch] = await Promise.allSettled([
         getDashboardOverview(), getDashboardActivity(15),
-        listSchemas(100), listJobs(100),
+        listSchemas(100),
       ]);
       if (ov.status === "fulfilled") setOverview(ov.value);
       if (act.status === "fulfilled") setActivity(act.value.events || []);
       if (sch.status === "fulfilled") setSchemas(sch.value.schemas || []);
-      if (jb.status === "fulfilled") setJobs(jb.value.jobs || []);
     } catch (e) { setError(e instanceof Error ? e.message : "Failed to load system data."); }
     finally { setLoading(false); }
   }, []);
@@ -104,8 +94,7 @@ export default function DashboardPage() {
 
   const flash = (msg: string) => { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(null), 3000); };
 
-  const filteredSchemas = schemas.filter((s) =>
-    !schemaSearch || (s.filename || s.schema_id).toLowerCase().includes(schemaSearch.toLowerCase()));
+  const filteredSchemas = schemas;
 
   const mockMetricPulse = [40, 60, 45, 80, 50, 90, 100];
 
@@ -133,7 +122,7 @@ export default function DashboardPage() {
                   ].map(tab => (
                     <button
                       key={tab.id}
-                      onClick={() => setActiveTab(tab.id as any)}
+                      onClick={() => setActiveTab(tab.id as "overview" | "explorer" | "fidelity")}
                       className={`flex items-center gap-2 px-4 py-2 rounded-sm text-[10px] font-medium uppercase tracking-widest transition-premium ${activeTab === tab.id ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
                     >
                       <tab.icon className="h-3 w-3" />
@@ -393,5 +382,5 @@ export default function DashboardPage() {
   );
 }
 
-function ShieldAlert(props: any) { return <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-shield-alert"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>; }
-function ShieldCheck(props: any) { return <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-shield-check"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>; }
+function ShieldAlert(props: React.SVGProps<SVGSVGElement>) { return <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-shield-alert"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>; }
+function ShieldCheck(props: React.SVGProps<SVGSVGElement>) { return <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-shield-check"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>; }

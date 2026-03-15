@@ -3,8 +3,6 @@ import { Head } from "nextra/components";
 import "./globals.css";
 import { Raleway } from "next/font/google";
 import { Providers } from "@/components/providers";
-import { ThemeProvider } from "@/components/theme-provider";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { Layout, Navbar } from "nextra-theme-docs";
 import { getPageMap } from "nextra/page-map";
 import { Footer } from "@/components/layout/Footer";
@@ -45,7 +43,6 @@ const sidebar = {
   toggleButton: false,
 };
 
-import { AuthProvider } from "@/lib/auth-context";
 import { NavbarAuth } from "@/components/layout/NavbarAuth";
 import { ConditionalSearch } from "@/components/shared/ConditionalSearch";
 
