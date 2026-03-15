@@ -48,7 +48,10 @@ export function AccountSettingsDialog({ open, onOpenChange }: AccountSettingsDia
             const { error } = await supabase.auth.updateUser({ data: { username } });
             if (error) throw error;
             setUsernameMessage("Username updated successfully!");
-        } catch (e: any) { setUsernameMessage(e.message || "Failed"); } finally { setUpdatingUsername(false); }
+        } catch (e: unknown) { 
+            const msg = e instanceof Error ? e.message : String(e);
+            setUsernameMessage(msg || "Failed"); 
+        } finally { setUpdatingUsername(false); }
     };
 
     const handleUpdatePassword = async (e: React.FormEvent) => {
@@ -60,7 +63,10 @@ export function AccountSettingsDialog({ open, onOpenChange }: AccountSettingsDia
             if (error) throw error;
             setPasswordMessage("Password updated successfully!");
             setPassword(""); setConfirmPassword("");
-        } catch (e: any) { setPasswordMessage(e.message || "Failed"); } finally { setUpdatingPassword(false); }
+        } catch (e: unknown) { 
+            const msg = e instanceof Error ? e.message : String(e);
+            setPasswordMessage(msg || "Failed"); 
+        } finally { setUpdatingPassword(false); }
     };
 
     const handleDeleteAccount = async () => {
@@ -71,12 +77,22 @@ export function AccountSettingsDialog({ open, onOpenChange }: AccountSettingsDia
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-md bg-card backdrop-blur-3xl border max-h-[85vh] overflow-y-auto">
-                <DialogHeader><DialogTitle>Account Settings</DialogTitle><DialogDescription>Manage profile and security.</DialogDescription></DialogHeader>
-                <div className="space-y-6 mt-4">
-                    <ProfileSection username={username} setUsername={setUsername} usernameAvailable={usernameAvailable} checkingUsername={checkingUsername} updatingUsername={updatingUsername} usernameMessage={usernameMessage} onUpdateUsername={handleUpdateUsername} currentUsername={user?.user_metadata?.username || ""} />
-                    <SecuritySection password={password} setPassword={setPassword} confirmPassword={confirmPassword} setConfirmPassword={setConfirmPassword} showPassword={showPassword} setShowPassword={setShowPassword} showConfirmPassword={showConfirmPassword} setShowConfirmPassword={setShowConfirmPassword} updatingPassword={updatingPassword} passwordMessage={passwordMessage} onUpdatePassword={handleUpdatePassword} provider={user?.app_metadata?.provider || 'email'} />
-                    <DangerZone deleteConfirm={deleteConfirm} setDeleteConfirm={setDeleteConfirm} deleting={deleting} onDeleteAccount={handleDeleteAccount} />
+            <DialogContent className="sm:max-w-md bg-card/95 backdrop-blur-3xl border border-border/50 max-h-[90vh] overflow-y-auto p-0 rounded-xl shadow-2xl overflow-hidden">
+                <div className="p-8 space-y-10">
+                    <DialogHeader className="space-y-2">
+                        <DialogTitle className="text-2xl font-light tracking-tight text-foreground flex items-center gap-3">
+                            Account <span className="font-semibold text-primary">Configuration</span>
+                        </DialogTitle>
+                        <DialogDescription className="text-xs font-light text-muted-foreground/80 uppercase tracking-widest">
+                            Authorized Node Management
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-12">
+                        <ProfileSection username={username} setUsername={setUsername} usernameAvailable={usernameAvailable} checkingUsername={checkingUsername} updatingUsername={updatingUsername} usernameMessage={usernameMessage} onUpdateUsername={handleUpdateUsername} currentUsername={user?.user_metadata?.username || ""} />
+                        <SecuritySection password={password} setPassword={setPassword} confirmPassword={confirmPassword} setConfirmPassword={setConfirmPassword} showPassword={showPassword} setShowPassword={setShowPassword} showConfirmPassword={showConfirmPassword} setShowConfirmPassword={setShowConfirmPassword} updatingPassword={updatingPassword} passwordMessage={passwordMessage} onUpdatePassword={handleUpdatePassword} provider={user?.app_metadata?.provider || 'email'} />
+                        <DangerZone deleteConfirm={deleteConfirm} setDeleteConfirm={setDeleteConfirm} deleting={deleting} onDeleteAccount={handleDeleteAccount} />
+                    </div>
                 </div>
             </DialogContent>
         </Dialog>

@@ -1,68 +1,67 @@
-# FastAPI Project
+# BurstDB - API Synthesis Gateway
 
-A simple FastAPI project setup with modern Python tooling using `uv` package manager.
+The **BurstDB API** is a high-performance FastAPI service that orchestrates generative data synthesis tasks. It serves as the bridge between the UI and the distributed ML synthesis workers, utilizing a high-throughput **Apache Arrow** data plane.
 
-## Project Structure
+---
 
-```
-├── .env
-├── .gitignore
-├── pyproject.toml
-├── uv.lock
-├── main.py
-└── src/
-    ├── app.py
-    ├── config.py
-    ├── routers/
-    ├── utils/
-    └── lib/
-```
+## 🛠️ Internal Architecture
 
-## Prerequisites
+The API operates in an asynchronous task-driven model, specifically optimized for high-volume data serialization:
 
-- Python 3.8+
-- [uv](https://github.com/astral-sh/uv) package manager
+1.  **Gateway (FastAPI)**: Implements asynchronous handlers with Pydantic v2 validation. Manages REST routes for blueprint ingestion and cluster telemetry.
+2.  **Constraint Engine**: Uses a proprietary **ConstraintGraph** logic to map SQL, NoSQL, and Graph schemas into a unified synthesis metadata format.
+3.  **Task Broker (Redis)**: Orchestrates job distribution across the worker cluster using a priority-queued Celery architecture.
+4.  **Worker Nodes (Celery)**: Dedicated compute units running the **ML Synthesis Layer**.
+    - **Modeling**: SDV, CTGAN, and Gaussian Copula.
+    - **Optimization**: All synthesis IO is handled via **Apache Arrow** for sub-second serialization of million-row datasets.
 
-## Installation
+---
 
-1. Clone the repository
-2. Install dependencies:
-   ```bash
-   uv sync
-   ```
+## 🚀 Orchestration Setup
 
-## Running the Application
+### 1. Requirements
+- **Python 3.13+** (using `uv` is strictly recommended for dependency resolution)
+- **Redis 6.0+**
+- **S3 / Local Storage** (for artifact buffering)
 
-Start the development server:
+### 2. Installation & Sync
 ```bash
-uv run uvicorn main:app --reload
+uv sync
 ```
 
-The API will be available at `http://localhost:8000`
+### 3. Service Lifecycle
 
-## API Documentation
-
-- Swagger UI: `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
-
-## Development
-
-### Adding Dependencies
-
+**Start the API Gateway**:
 ```bash
-uv add package-name
+uv run uvicorn main:app --reload --port 8000
 ```
 
-### Adding Development Dependencies
-
+**Start the Distributed Workers**:
 ```bash
-uv add --dev package-name
+# Recommended: Run multiple workers for parallel synthesis
+uv run celery -A src.celery_app worker --loglevel=info -P solo
 ```
 
-### Environment Variables
+---
 
-Copy `.env.example` to `.env` and update the values as needed.
+## 📡 API Stratagem
 
-## License
+### Blueprint Parsing
+- `POST /parse`: Ingests SQL/DDL and reconstructs the architectural graph.
+- `POST /parse/supabase`: Deep integration with Postgres reflection via SQLAlchemy.
 
-MIT
+### Synthesis Lifecycle
+- `POST /synthetic/generate`: Dispatches a synthesis job with custom model parameters (scale, fidelity targets).
+- `GET /synthetic/jobs/{id}/status`: Provides real-time progress percentages and cluster telemetry.
+- `GET /synthetic/download/{id}`: Streams the generated Parquet/CSV archive.
+
+---
+
+## 📁 System Topology
+
+- `main.py`: Service entry point and global exception orchestration.
+- `src/celery_app.py`: Worker configuration and broker connection logic.
+- `src/routers/`: Feature-sliced API routing (Synthesis, Blueprints, Jobs).
+- `src/lib/ml`: Internal ML wrappers for SDV and data-cleaning protocols.
+
+© 2024 BURSTDB SYNTHESIS SYSTEMS.

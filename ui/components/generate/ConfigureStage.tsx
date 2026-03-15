@@ -20,7 +20,7 @@ interface ConfigureStageProps {
   removeEncryptionRow: (id: string) => void;
   selectedTemplate: string;
   setSelectedTemplate: (val: string) => void;
-  templates: Record<string, any>;
+  templates: Record<string, unknown>;
   onGenerate: () => void;
 }
 
@@ -28,7 +28,7 @@ export function ConfigureStage({
   databaseStructure, tableEntryCounts, onTableEntryCountChange,
   enableEncryption, setEnableEncryption, encryptionConfigs,
   onEncryptionChange, addEncryptionRow, removeEncryptionRow,
-  selectedTemplate, setSelectedTemplate, templates, onGenerate
+  onGenerate
 }: ConfigureStageProps) {
   if (!databaseStructure) return <div>No schema loaded</div>;
 

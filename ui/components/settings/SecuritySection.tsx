@@ -18,19 +18,63 @@ interface SecuritySectionProps {
 export function SecuritySection({ password, setPassword, confirmPassword, setConfirmPassword, showPassword, setShowPassword, showConfirmPassword, setShowConfirmPassword, updatingPassword, passwordMessage, onUpdatePassword, provider }: SecuritySectionProps) {
   const isEmail = provider === 'email';
   return (
-    <div className="space-y-4 relative">
-      <h3 className="text-sm font-medium border-b pb-2">Security</h3>
-      {!isEmail && <div className="absolute inset-0 z-10 bg-background/40 flex items-center justify-center"><span className="text-xs bg-background p-1 border rounded">Managed via {provider}</span></div>}
-      <form onSubmit={onUpdatePassword} className={`space-y-3 ${!isEmail ? 'opacity-40 pointer-events-none' : ''}`}>
+    <div className="space-y-6 relative">
+      <div className="flex flex-col gap-1">
+        <h3 className="text-xs font-semibold tracking-[0.1em] uppercase text-muted-foreground">Security Layer</h3>
+        <p className="text-[10px] font-light text-muted-foreground/60 uppercase tracking-widest">Enforce cryptographic integrity.</p>
+      </div>
+
+      {!isEmail && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center pt-8">
+           <div className="bg-muted/80 backdrop-blur-sm border border-border px-4 py-2 rounded-sm shadow-xl">
+             <span className="text-[10px] font-medium tracking-widest uppercase text-foreground/70">Managed via {provider}</span>
+           </div>
+        </div>
+      )}
+
+      <form onSubmit={onUpdatePassword} className={`space-y-4 ${!isEmail ? 'opacity-20 pointer-events-none grayscale' : ''}`}>
         <div className="space-y-2">
-          <Label htmlFor="new-pw">New Password</Label>
-          <div className="relative"><Input id="new-pw" type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} /><button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2">{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div>
+          <Label htmlFor="new-pw" className="text-[10px] uppercase tracking-wider font-medium text-muted-foreground">New Cipher</Label>
+          <div className="relative">
+            <Input 
+              id="new-pw" 
+              type={showPassword ? "text" : "password"} 
+              value={password} 
+              onChange={(e) => setPassword(e.target.value)} 
+              className="h-10 bg-background border-border text-xs font-light rounded-sm focus-visible:ring-1 focus-visible:ring-primary pl-4 pr-10"
+            />
+            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors">
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
         </div>
-        <div className="flex gap-2 items-end">
-          <div className="space-y-2 flex-1"><Label htmlFor="confirm-pw">Confirm Password</Label><div className="relative"><Input id="confirm-pw" type={showConfirmPassword ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} /><button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2">{showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div></div>
-          <Button type="submit" size="icon" disabled={updatingPassword}>{updatingPassword ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}</Button>
+
+        <div className="space-y-2">
+          <Label htmlFor="confirm-pw" className="text-[10px] uppercase tracking-wider font-medium text-muted-foreground">Confirm Cipher</Label>
+          <div className="relative">
+            <Input 
+              id="confirm-pw" 
+              type={showConfirmPassword ? "text" : "password"} 
+              value={confirmPassword} 
+              onChange={(e) => setConfirmPassword(e.target.value)} 
+              className="h-10 bg-background border-border text-xs font-light rounded-sm focus-visible:ring-1 focus-visible:ring-primary pl-4 pr-10"
+            />
+            <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors">
+              {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
         </div>
-        {passwordMessage && <p className={`text-sm ${passwordMessage.includes("success") ? "text-green-500" : "text-destructive"}`}>{passwordMessage}</p>}
+
+        <Button type="submit" size="sm" disabled={updatingPassword} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-9 rounded-sm uppercase tracking-widest text-[10px] font-medium transition-all">
+          {updatingPassword ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : <Save className="h-3 w-3 mr-2" />}
+          Rotate Keys
+        </Button>
+
+        {passwordMessage && (
+          <p className={`text-[10px] font-medium tracking-wide uppercase ${passwordMessage.includes("success") ? "text-green-500" : "text-destructive"}`}>
+            {passwordMessage}
+          </p>
+        )}
       </form>
     </div>
   );

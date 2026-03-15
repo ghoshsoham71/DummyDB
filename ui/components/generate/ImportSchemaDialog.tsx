@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Upload, FileText, Loader2, AlertCircle } from "lucide-react";
 import { parseSQL } from "@/lib/api";
 import { useSchemaStore } from "@/stores/schema-store";
@@ -34,18 +33,20 @@ export function ImportSchemaDialog({ open, onOpenChange }: ImportSchemaDialogPro
     try {
       const response = await parseSQL(file);
       // Backend returns ParseResponse which has 'data' as stringified JSON of the schema
-      const schemaData = JSON.parse((response as any).data);
+      const rawResponse = response as unknown as { data: string, schema_id?: string };
+      const schemaData = JSON.parse(rawResponse.data);
       
       setCurrentSchema({
-        id: (response as any).schema_id || Math.random().toString(36).substring(7),
+        id: (rawResponse.schema_id as string) || Math.random().toString(36).substring(7),
         name: file.name,
         canonical_schema: schemaData
       });
       
       onOpenChange(false);
       setFile(null);
-    } catch (err: any) {
-      setError(err.message || "Failed to parse schema");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(msg || "Failed to parse schema");
     } finally {
       setIsUploading(false);
     }

@@ -1,32 +1,58 @@
 ---
-sidebarTitle: Getting Started ðŸš€
+sidebarTitle: Getting Started
 ---
 
 # Getting Started
 
-Follow these steps to run BurstDB locally.
+Follow these steps to deploy and run the **BurstDB Synthesis Platform** in your development environment.
 
-## Prerequisites
+---
 
-- **Python 3.13+** — backend
-- **Node.js 18+** — frontend
-- **uv** — Python package manager (recommended)
+## 🏗️ Prerequisites
 
-## 1. Clone the Repository
+Ensure your system meets the following infrastructure requirements:
+
+- **Python 3.13+** — Core API & ML workers
+- **Node.js 18+** — UI Interface
+- **uv** — High-performance Python package manager (Recommended)
+- **Redis 6.0+** — Distributed task broker
+
+---
+
+## 1. Environment Orchestration
+
+Clone the platform and navigate to the root directory:
 
 ```bash
-git clone https://github.com/your-org/BurstDB.git
+git clone https://github.com/ghoshsoham71/BurstDB.git
 cd BurstDB
 ```
 
-## 2. Start the Backend
+---
 
+## 2. Infrastructure Setup (Backend)
+
+The backend requires two parallel processes: the **API Gateway** and the **Synthesis Worker**.
+
+### API Gateway
 ```bash
 cd api
-uv run uvicorn main:app --reload
+uv sync
+uv run uvicorn main:app --reload --port 8000
 ```
 
-## 3. Start the Frontend
+### Synthesis Worker
+```bash
+# In a new terminal process
+cd api
+uv run celery -A src.celery_app worker --loglevel=info -P solo
+```
+
+---
+
+## 3. Interface Setup (Frontend)
+
+Run the Next.js environment to access the Studio and Dashboard:
 
 ```bash
 cd ui
@@ -34,34 +60,30 @@ npm install
 npm run dev
 ```
 
-## 4. Environment Variables
+The platform will be available at [http://localhost:3000](http://localhost:3000).
 
-Create a `.env` file in the `api/` directory:
+---
+
+## 4. Environment Configuration
+
+Create a `.env` file in the `api/` directory for secure integrations:
 
 ```env
+# Required for persistent storage
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+# Broker Configuration
+REDIS_URL=redis://localhost:6379/0
 ```
 
-For MongoDB and Neo4j, connection details are provided directly in the UI.
+---
 
-## Optional: Neo4j Setup
+## 📡 Verification
 
-If you want to use Neo4j:
+Verify your installation by accessing the following health endpoints:
 
-1. Download [Neo4j Desktop](https://neo4j.com/download/) or run via Docker:
-   ```bash
-   docker run -d -p 7474:7474 -p 7687:7687 neo4j:latest
-   ```
-2. Access the Neo4j Browser at `http://localhost:7474`
-3. The Bolt protocol runs on port `7687`
+- **Synthesis UI**: [http://localhost:3000](http://localhost:3000)
+- **API Specs**: [http://localhost:8000/docs](http://localhost:8000/docs)
+- **Worker Status**: Check the Celery terminal for `worker: Ready` signal.
 
-## Optional: MongoDB Setup
-
-If using MongoDB:
-
-1. Install [MongoDB Community](https://www.mongodb.com/try/download/community) or run via Docker:
-   ```bash
-   docker run -d -p 27017:27017 mongo:latest
-   ```
-2. Connection string: `mongodb://localhost:27017`

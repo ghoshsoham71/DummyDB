@@ -28,9 +28,12 @@ export interface Database {
 }
 
 export interface ParsedSchema {
+  schema_id?: string;
   databases: Database[];
-  source?: string;            // "mongodb" | "neo4j" | undefined (SQL)
+  source?: string;
   connection?: { uri?: string; http_browser?: string };
+  statistics?: Record<string, unknown>;
+  data?: string; // For stringified JSON data
 }
 
 export interface SchemaListItem {
@@ -108,7 +111,7 @@ export async function apiFetch<T>(path: string, opts?: RequestInit): Promise<T> 
 
   let displayBody = opts?.body;
   if (typeof opts?.body === 'string') {
-    try { displayBody = JSON.parse(opts.body); } catch (e) { /* ignore parse error */ }
+    try { displayBody = JSON.parse(opts.body); } catch { /* ignore parse error */ }
   }
   console.log(`[API Fetch] ${opts?.method || 'GET'} ${path}`, displayBody || '');
 
@@ -143,14 +146,14 @@ export async function parseSQL(file: File, seedFile?: File) {
   const fd = new FormData();
   fd.append("file", file);
   if (seedFile) fd.append("seed_data_file", seedFile);
-  return apiFetch<Record<string, unknown>>("/parse?save_to_disk=true&overwrite_existing=true", {
+  return apiFetch<ParsedSchema>("/parse?save_to_disk=true&overwrite_existing=true", {
     method: "POST",
     body: fd,
   });
 }
 
 export async function parseSupabase(connectionString: string) {
-  return apiFetch<Record<string, unknown>>("/parse/supabase", {
+  return apiFetch<ParsedSchema>("/parse/supabase", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ connection_string: connectionString, save_to_disk: true, overwrite_existing: true }),
@@ -158,7 +161,7 @@ export async function parseSupabase(connectionString: string) {
 }
 
 export async function parseMongoDB(connectionString: string, databaseName?: string, sampleSize = 100) {
-  return apiFetch<Record<string, unknown>>("/parse/mongodb", {
+  return apiFetch<ParsedSchema>("/parse/mongodb", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -172,7 +175,7 @@ export async function parseMongoDB(connectionString: string, databaseName?: stri
 }
 
 export async function parseJsonSchema(schema: Record<string, unknown>, filename = "schema.json") {
-  return apiFetch<Record<string, unknown>>("/parse/json", {
+  return apiFetch<ParsedSchema>("/parse/json", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ schema, filename, save_to_disk: true, overwrite_existing: true }),
@@ -180,7 +183,7 @@ export async function parseJsonSchema(schema: Record<string, unknown>, filename 
 }
 
 export async function parseNeo4j(uri: string, username: string, password: string, database?: string) {
-  return apiFetch<Record<string, unknown>>("/parse/neo4j", {
+  return apiFetch<ParsedSchema>("/parse/neo4j", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -201,7 +204,7 @@ export async function listSchemas(limit = 50, offset = 0) {
 }
 
 export async function getSchema(schemaId: string) {
-  return apiFetch<Record<string, unknown>>(`/schemas/${schemaId}`);
+  return apiFetch<ParsedSchema>(`/schemas/${schemaId}`);
 }
 
 export async function deleteSchema(schemaId: string) {

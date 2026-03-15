@@ -1,75 +1,46 @@
-﻿---
+---
 sidebarTitle: Synthetic Data
 ---
 
-# Synthetic Data Generation
+# Generative Synthesis Engine
 
-After parsing a schema, BurstDB generates realistic synthetic data using the **SDV (Synthetic Data Vault)** library.
+The **BurstDB Synthesis Engine** represents the core of the platform, transforming architectural constraints into high-fidelity synthetic data. It leverages state-of-the-art generative models to ensure your development environments are reactive, scalable, and secure.
 
-## Synthesizer Types
+---
 
-| Type | Description | Best For |
-|------|-------------|----------|
-| **HMA** | Hierarchical / Multi-table Aware | Schemas with foreign keys |
-| **CTGAN** | Conditional GAN-based | Single tables, complex distributions |
-| **GAUSSIAN** | Gaussian Copula | Fast generation, simple schemas |
+## 🤖 Modeling Stratagem
 
-## Generation Templates
+BurstDB utilizes a multi-model modeling pipeline, selecting the optimal synthesizer based on the complexity of the **ConstraintGraph**:
 
-BurstDB provides pre-configured templates:
+| Model | Class | Mathematical Specialization |
+| :--- | :--- | :--- |
+| **HMA** | Hierarchical | Preserves multi-table joint distributions and foreign key parity. |
+| **CTGAN** | Generative | Captures high-entropy distributions in tabular categorical data. |
+| **Copula** | Probabilistic | High-velocity generation utilizing Gaussian Copula marginals. |
+| **VAE** | Autoencoding | Optimized for extremely large datasets with latent space regularity. |
 
-| Template | Scale | Synthesizer | Use Case |
-|----------|-------|-------------|----------|
-| Quick | 1.0x | GAUSSIAN | Rapid prototyping |
-| Balanced | 2.0x | HMA | General development |
-| High Quality | 5.0x | CTGAN | Production-like testing |
+---
 
-Select a template in the **Configure** step, or set custom parameters per table.
+## 🚀 The Data Plane (Apache Arrow)
 
-## Configuration Options
+To avoid the performance bottlenecks of standard JSON/CSV serialization, BurstDB utilizes an **Apache Arrow** data plane. This allows for:
+- **Zero-Copy Throughput**: Immediate interchange between ML modeling libraries (NumPy/Pandas) and the storage buffers.
+- **High Concurrency**: Efficient parallelized IO across the Celery worker cluster.
+- **Binary Precision**: Maintaining floating-point and temporal accuracy at scale.
 
-### Per-Table Row Count
+---
 
-Set the exact number of synthetic rows to generate for each table:
+## 📊 Statistical Fidelity Audit
 
-```
-users:     1000
-orders:    5000
-products:  200
-```
+Every synthesis job undergoes a rigorous validation cycle to ensure alignment with the source architecture:
 
-### Encryption
+- **Shape Fidelity (KS-Test)**: Measures the distance between synthetic and real cumulative distribution functions (CDF).
+- **Correlation Fidelity (Spearman/Cov)**: Ensures that the relationships between disparate columns (e.g., Age vs. Income) are statistically preserved.
+- **Referential Integrity**: 100% parity across foreign key constraints and primary key uniqueness.
 
-Optionally encrypt specific columns in the output:
+---
 
-| Algorithm | Key Size | Speed |
-|-----------|----------|-------|
-| AES-256 | 256-bit | Fast |
-| AES-128 | 128-bit | Fast |
-| RSA-2048 | 2048-bit | Slow |
-| RSA-4096 | 4096-bit | Slow |
-| ChaCha20 | 256-bit | Fast |
+## 🛡️ Differential Privacy
 
-## Output Formats
+BurstDB integrates **ε-differential privacy** into the synthesis loop. By injecting calibrated mathematical noise into the modeling parameters, the system guarantees that no individual production record can be reconstructed from the synthetic output, while maintaining the global statistical utility of the dataset.
 
-| Format | Description |
-|--------|-------------|
-| CSV | Default, one file per table |
-| JSON | JSON records per table |
-| Parquet | Columnar format |
-
-## Downloading
-
-Completed jobs produce a ZIP file containing all generated data. Download via:
-
-- The **Generate** page after completion
-- The **Dashboard → Jobs** tab
-- Direct URL: `GET /api/v1/synthetic/download/{generation_id}`
-
-## Quality Metrics
-
-BurstDB evaluates synthetic data quality:
-
-- **Column Shapes** — distribution similarity
-- **Column Pair Trends** — correlation preservation
-- **Overall Quality Score** — 0 to 1 composite score

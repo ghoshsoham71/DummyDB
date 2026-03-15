@@ -5,12 +5,10 @@ import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { checkUsernameAvailable } from "@/lib/api";
 import { Turnstile } from '@marsidev/react-turnstile';
 import { LoginView } from "./LoginView";
 import { SignupView } from "./SignupView";
-import { Loader2 } from "lucide-react";
 
 export function AuthPanel() {
     const [isLogin, setIsLogin] = useState(true);
@@ -23,8 +21,6 @@ export function AuthPanel() {
     const [checkingUsername, setCheckingUsername] = useState(false);
     const [captchaToken, setCaptchaToken] = useState<string | null>(null);
     const [showPassword, setShowPassword] = useState(false);
-    const [showCheckEmail, setShowCheckEmail] = useState(false);
-    const [showForgotPassword, setShowForgotPassword] = useState(false);
     const { signInWithGoogle } = useAuth();
 
     const router = useRouter();
@@ -56,16 +52,19 @@ export function AuthPanel() {
             } else {
                 const { error } = await supabase.auth.signUp({ email, password, options: { data: { username: username.trim() } } });
                 if (error) throw error;
-                setShowCheckEmail(true);
+                // router.push("/#check-email"); // Or similar
             }
-        } catch (err: any) { setError(err.message || "Error"); } finally { setLoading(false); }
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            setError(msg || "Error"); 
+        } finally { setLoading(false); }
     };
 
     return (
         <div className="mx-auto w-full max-w-sm space-y-6">
             <h1 className="text-xl font-bold text-center">{isLogin ? "Get Started" : "Create Account"}</h1>
             {isLogin ? (
-                <LoginView email={email} setEmail={setEmail} password={password} setPassword={setPassword} showPassword={showPassword} setShowPassword={setShowPassword} loading={loading} onForgotPassword={() => setShowForgotPassword(true)} onSubmit={handleAuth} captchaToken={captchaToken} />
+                <LoginView email={email} setEmail={setEmail} password={password} setPassword={setPassword} showPassword={showPassword} setShowPassword={setShowPassword} loading={loading} onForgotPassword={() => {}} onSubmit={handleAuth} captchaToken={captchaToken} />
             ) : (
                 <SignupView email={email} setEmail={setEmail} username={username} setUsername={setUsername} usernameAvailable={usernameAvailable} checkingUsername={checkingUsername} password={password} setPassword={setPassword} showPassword={showPassword} setShowPassword={setShowPassword} loading={loading} onSubmit={handleAuth} captchaToken={captchaToken} />
             )}

@@ -65,6 +65,15 @@ async def download_synthetic(schema_id: str, user=Depends(get_current_user)):
     arc = file_manager.create_archive([str(f) for f in csvs], f"synthetic_{schema_id}")
     return FileResponse(arc, filename=f"synthetic_{schema_id}.zip", media_type="application/zip")
 
+@router.get("/jobs")
+async def list_jobs(
+    limit: int = 20, 
+    offset: int = 0, 
+    db: AsyncSession = Depends(get_db)
+):
+    """List all synthetic generation jobs."""
+    return await job_manager.get_job_list(db, limit=limit, offset=offset)
+
 @router.get("/jobs/{job_id}/status")
 async def get_status(job_id: str, db: AsyncSession = Depends(get_db)):
     try:

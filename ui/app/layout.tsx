@@ -48,7 +48,6 @@ const sidebar = {
 import { AuthProvider } from "@/lib/auth-context";
 import { NavbarAuth } from "@/components/layout/NavbarAuth";
 import { ConditionalSearch } from "@/components/shared/ConditionalSearch";
-import { HideNavLinks } from "@/components/layout/HideNavLinks";
 
 export default async function RootLayout({
   children,
@@ -65,7 +64,6 @@ export default async function RootLayout({
       <body className={`${ralewayFont.variable} font-sans antialiased`}>
           <Providers>
             <ConditionalSearch />
-            <HideNavLinks />
             <Layout
               navbar={navbar}
               pageMap={await getPageMap()}

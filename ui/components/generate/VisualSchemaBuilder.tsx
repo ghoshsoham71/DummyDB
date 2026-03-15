@@ -6,14 +6,22 @@ import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Database, Table as TableIcon, Layers } from "lucide-react";
-import { Table, TableAttribute } from "@/lib/api";
+import { Table } from "@/lib/api";
+
+interface SchemaBuilderData {
+  databases?: {
+    name: string;
+    tables: Table[];
+  }[];
+  tables?: Table[];
+}
 
 export function VisualSchemaBuilder({ 
   onSave, 
   initialSchema 
 }: { 
-  onSave: (schema: any) => void,
-  initialSchema?: any
+  onSave: (schema: SchemaBuilderData) => void,
+  initialSchema?: SchemaBuilderData
 }) {
   const [tables, setTables] = useState<Table[]>([]);
 

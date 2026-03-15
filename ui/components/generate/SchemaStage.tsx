@@ -4,11 +4,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { ApiResponse } from "./types";
-import { parseSQL, parseSupabase, parseMongoDB, parseNeo4j, SchemaListItem } from "@/lib/api";
+
+import { parseSQL, parseSupabase, parseMongoDB, parseNeo4j, SchemaListItem, ParsedSchema } from "@/lib/api";
 import { VisualSchemaBuilder } from "./VisualSchemaBuilder";
 
 export const schemaFormSchema = z.object({
@@ -26,7 +26,7 @@ export const schemaFormSchema = z.object({
 export type SchemaFormData = z.infer<typeof schemaFormSchema>;
 
 interface SchemaStageProps {
-  onSchemaParsed: (data: any) => void;
+  onSchemaParsed: (data: unknown) => void;
   isUploading: boolean;
   setIsUploading: (val: boolean) => void;
   setUploadError: (val: string | null) => void;
@@ -50,7 +50,7 @@ export function SchemaStage({
   const onSubmit = async (data: SchemaFormData) => {
     setIsUploading(true); setUploadError(null);
     try {
-      let res: any;
+      let res: ParsedSchema | undefined;
       if (data.databaseType === "supabase") res = await parseSupabase(data.connectionString!);
       else if (data.databaseType === "sql") res = await parseSQL(data.sqlFile as File, data.seedDataFile as File);
       else if (data.databaseType === "nosql") res = await parseMongoDB(data.connectionString!, data.mongoDbName!);

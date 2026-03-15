@@ -1,141 +1,73 @@
 ---
-sidebarTitle: API Reference ðŸ“¡
+sidebarTitle: API Reference
 ---
 
-# API Reference
+# API Synthesis Reference
 
-## Schema Parsing
+The **BurstDB Synthesis API** is a high-performance orchestration layer that manages the distributed generation lifecycle. It provides endpoints for blueprint parsing, job telemetry, and artifact acquisition.
 
-### Parse SQL File
+---
 
+## 🏗️ Blueprint Orchestration
+
+### SQL Data Reconstruction
 ```
 POST /parse
 Content-Type: multipart/form-data
 ```
+Parses architectural SQL dumps into internal Synthesis Blueprints.
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `file` | File | SQL file with CREATE TABLE statements |
-| `seed_data_file` | File | Optional seed data (CSV/SQL) |
-| `save_to_disk` | bool | Save schema JSON to disk (default: true) |
+| Parameter | Type | Required |
+| :--- | :--- | :--- |
+| `file` | `.sql` Blob | Yes |
+| `save_to_disk` | boolean | Yes |
 
-### Parse Supabase
-
-```
-POST /parse/supabase
-Content-Type: application/json
-```
-
-```json
-{
-  "connection_string": "postgresql://...",
-  "save_to_disk": true,
-  "overwrite_existing": false
-}
-```
-
-### Parse MongoDB
-
-```
-POST /parse/mongodb
-Content-Type: application/json
-```
-
-```json
-{
-  "connection_string": "mongodb://localhost:27017",
-  "database_name": "myDb",
-  "sample_size": 100,
-  "save_to_disk": true
-}
-```
-
-### Parse Neo4j
-
-```
-POST /parse/neo4j
-Content-Type: application/json
-```
-
-```json
-{
-  "uri": "bolt://localhost:7687",
-  "username": "neo4j",
-  "password": "password",
-  "database": null,
-  "save_to_disk": true
-}
-```
+### Distributed Connectors
+Standardized endpoints for remote infrastructure synthesis:
+- `POST /parse/supabase` — PostgreSQL bridge.
+- `POST /parse/mongodb` — Document store bridge.
+- `POST /parse/neo4j` — Graph entity bridge.
 
 ---
 
-## Schema Management
+## ⚡ Synthesis Pipeline
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/schemas` | List all schemas |
-| `GET` | `/schemas/{id}` | Get schema details |
-| `DELETE` | `/schemas/{id}` | Delete schema |
-| `POST` | `/schemas/bulk-delete` | Bulk delete schemas |
-| `GET` | `/schemas/{id}/tables/{table}` | Get table details |
+Orchestrate the ML generation queue via the following protocols:
 
----
+| Method | Protocol | Operation |
+| :--- | :--- | :--- |
+| `POST` | `/synthetic/generate` | Dispatch blueprint to worker cluster. |
+| `GET` | `/synthetic/jobs` | Retrieve global telemetry. |
+| `GET` | `/synthetic/jobs/{id}/status` | Sub-second status polling. |
+| `GET` | `/synthetic/download/{id}` | Acquire high-fidelity ZIP artifact. |
 
-## Synthetic Data
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/synthetic/generate` | Start generation |
-| `GET` | `/synthetic/jobs` | List all jobs |
-| `GET` | `/synthetic/jobs/{id}/status` | Job status |
-| `DELETE` | `/synthetic/jobs/{id}` | Cancel job |
-| `GET` | `/synthetic/download/{id}` | Download results (ZIP) |
-| `GET` | `/synthetic/templates` | List templates |
-| `GET` | `/synthetic/stats` | System statistics |
-
-### Generate Payload
-
+### Dispatch Payload Example
 ```json
 {
-  "schema_id": "schema_abc123",
+  "schema_id": "blueprint_identifier",
   "scale_factor": 2.0,
-  "num_rows": { "users": 1000, "orders": 5000 },
   "synthesizer_type": "HMA",
-  "output_format": "csv",
-  "seed": 42
+  "output_format": "csv"
 }
 ```
 
 ---
 
-## Dashboard
+## 📊 System Telemetry
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/dashboard/overview` | Aggregated stats |
-| `GET` | `/dashboard/activity` | Recent activity timeline |
-| `GET` | `/dashboard/schema-stats` | Per-schema analytics |
+Monitor the health and footprint of the synthesis cluster:
 
----
-
-## Health
-
-```
-GET /health
-```
-
-Returns system health status, including schema count and API version.
+- `GET /dashboard/overview` — Aggregated cluster analytics.
+- `GET /dashboard/activity` — Real-time operational audit.
+- `GET /health` — Synthesis Gateway status.
 
 ---
 
-## Rate Limits
+## 🛡️ Operational Safeguards
 
-All endpoints are rate-limited via SlowAPI:
+The API Gateway implements strictly enforced operational limits via **SlowAPI** to ensure architectural stability:
 
-| Endpoint Group | Limit |
-|---------------|-------|
-| Parse | 10/minute |
-| Generate | 5/minute |
-| List/Status | 50-100/minute |
-| Dashboard | 60/minute |
-| Health | 100/minute |
+- **Blueprint Parsing**: 10 requests / min
+- **Synthesis Dispatch**: 5 requests / min
+- **Telemetry Polling**: 100 requests / min
+

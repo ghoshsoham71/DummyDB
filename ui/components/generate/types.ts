@@ -1,5 +1,4 @@
-import { LucideIcon } from "lucide-react";
-import { Database as DatabaseType, GenerationTemplate, SchemaListItem } from "@/lib/api";
+import { Database as DatabaseType } from "@/lib/api";
 
 export interface ApiResponse {
   schema_id?: string;
@@ -36,10 +35,4 @@ export const ENCRYPTION_ALGORITHMS = [
   "ChaCha20", "Twofish", "Blowfish", "DES", "3DES"
 ];
 
-export interface ApiResponse {
-  schema_id?: string;
-  databases: DatabaseType[];
-  source?: string;
-  connection?: { uri?: string; http_browser?: string };
-  statistics?: Record<string, unknown>;
-}
+

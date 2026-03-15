@@ -3,7 +3,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { Plus, Trash2, Database } from "lucide-react";
 import { SchemaBuilderTable } from "./types";
 
@@ -13,7 +12,7 @@ interface SchemaBuilderProps {
   onRemoveTable: (id: string) => void;
   onUpdateTable: (id: string, name: string) => void;
   onAddColumn: (tid: string) => void;
-  onUpdateColumn: (tid: string, cid: string, field: any, val: any) => void;
+  onUpdateColumn: (tid: string, cid: string, field: string, val: string) => void;
   onRemoveColumn: (tid: string, cid: string) => void;
   onBuild: () => void;
   isUploading: boolean;

@@ -15,6 +15,8 @@ from ..services.job_service import job_manager
 from ..services.file_service import file_manager
 from ..services.schema_store import get_user_schemas
 from ..lib.auth import get_current_user
+from ..db.session import get_db
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +27,11 @@ limiter = Limiter(key_func=get_remote_address)
 
 @router.get("/overview")
 @limiter.limit("60/minute")
-async def dashboard_overview(request: Request, user=Depends(get_current_user)):
+async def dashboard_overview(
+    request: Request, 
+    user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
     """Aggregated dashboard overview with schema, job, and storage stats (user-scoped)."""
     try:
         # --- Schema stats (user-scoped) ---
@@ -37,11 +43,11 @@ async def dashboard_overview(request: Request, user=Depends(get_current_user)):
             src = (sdata.get("metadata") or {}).get("source", "sql_upload")
             sources[src] = sources.get(src, 0) + 1
             schema_obj = sdata.get("schema", {})
-            for db in schema_obj.get("databases", []):
-                total_tables += len(db.get("tables", []))
+            for db_obj in schema_obj.get("databases", []):
+                total_tables += len(db_obj.get("tables", []))
 
-        # --- Job stats ---
-        job_stats = job_manager.get_job_stats()
+        # --- Job stats (await the async call) ---
+        job_stats = await job_manager.get_job_stats(db)
 
         # --- Storage stats ---
         try:
@@ -76,7 +82,12 @@ async def dashboard_overview(request: Request, user=Depends(get_current_user)):
 
 @router.get("/activity")
 @limiter.limit("60/minute")
-async def dashboard_activity(request: Request, limit: int = 20, user=Depends(get_current_user)):
+async def dashboard_activity(
+    request: Request, 
+    limit: int = 20, 
+    user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
     """Recent activity timeline across schemas and jobs (user-scoped)."""
     events: List[Dict[str, Any]] = []
 
@@ -93,9 +104,9 @@ async def dashboard_activity(request: Request, limit: int = 20, user=Depends(get
             "timestamp": created,
         })
 
-    # Job events
+    # Job events (await the async call)
     try:
-        jobs_list = job_manager.get_job_list(limit=100)
+        jobs_list = await job_manager.get_job_list(db, limit=100)
         for j in jobs_list:
             events.append({
                 "type": f"job_{j.get('status', 'unknown')}",
@@ -104,7 +115,8 @@ async def dashboard_activity(request: Request, limit: int = 20, user=Depends(get
                 "timestamp": j.get("created_at"),
                 "message": j.get("message", ""),
             })
-    except Exception:
+    except Exception as e:
+        logger.error(f"Failed to fetch jobs for activity: {e}")
         pass
 
     # Sort newest first and limit

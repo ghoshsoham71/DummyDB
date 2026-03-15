@@ -2,38 +2,56 @@
 sidebarTitle: Overview
 ---
 
-# BurstDB Documentation
+# BurstDB Synthesis Systems
 
-**BurstDB** is a synthetic data generation pipeline that parses database schemas and produces realistic mock data using machine learning models (SDV).
+**BurstDB** is a high-performance generative data synthesis platform designed for the modern enterprise. It transforms architectural metadata into high-fidelity synthetic databases, enabling seamless development and testing without production data risk.
 
-## Supported Databases
+---
 
-| Type | Source | How |
-|------|--------|-----|
-| **SQL** | `.sql` file upload | Upload a `CREATE TABLE` dump |
-| **PostgreSQL** | Supabase | Provide a Supabase connection string |
-| **NoSQL** | MongoDB | Connect via `mongodb://` URI |
-| **Graph** | Neo4j | Connect via Bolt URI |
+## 🏗️ Technical Architecture
 
-## Architecture
+BurstDB operates on a distributed synthesis model, separating the orchestration gateway from the heavy-lift machine learning modeling cluster.
 
-```
-┌─────────────┐     ┌──────────────┐     ┌─────────────────┐
-│   Next.js   │────▶│   FastAPI    │────▶│  SDV / CTGAN    │
-│   Frontend  │◀────│   Backend    │◀────│  HMA Synthesizer│
-└─────────────┘     └───────┬──────┘     └─────────────────┘
-                            │
-                  ┌─────────┼──────────┐
-                  │         │          │
-              Supabase   MongoDB     Neo4j
+```mermaid
+graph TD
+    A["Next.js Premium UI"] <--> B["FastAPI Gateway"]
+    B <--> C["Redis / Task Queue"]
+    C <--> D["Celery Workers"]
+    D <--> E["ML Synthesis Layer"]
+    E <--> F["SDV / CTGAN / VAE"]
+    D <--> G["Apache Arrow Buffers"]
 ```
 
-## Quick Links
+### Core Components
 
-- [Getting Started](/docs/getting-started) — install and run locally
-- [SQL Databases](/docs/sql-databases) — SQL file upload and Supabase
-- [MongoDB](/docs/nosql-databases) — NoSQL document database
-- [Neo4j](/docs/graph-databases) — Graph database with Cypher
-- [Synthetic Data](/docs/synthetic-data) — Generation templates and download
-- [Dashboard](/docs/dashboard) — Manage schemas, jobs, and stats
-- [API Reference](/docs/api-reference) — All REST endpoints
+#### 1. Synthesis Command Center (UI)
+A specialized visual studio for blueprint modeling and real-time generation orchestration. Built with Next.js 15, it manages a high-complexity **Zustand** state machine for referential integrity checking on the client side.
+
+#### 2. Synthesis Gateway (API)
+An asynchronous FastAPI service that acts as the orchestration brain. It implements a **ConstraintGraph** logic to ingest SQL, NoSQL, and Graph schemas and convert them into a unified, model-ready synthesis manifest.
+
+#### 3. Distributed Worker Cluster (ML)
+Scalable Celery nodes that execute the actual generative modeling.
+- **Data Plane**: Uses **Apache Arrow** for high-speed, zero-copy serialization between the ML models and the output buffers.
+- **Modeling Stratagem**: Leverages the **SDV ecosystem** (CTGAN, HMA, Gaussian Copulas) for specialized data reconstruction.
+
+#### 4. Quality Audit Engine
+Integrated statistical validation layer that performs **KS-Tests** and **TVD (Total Variation Distance)** calculations to ensure synthetic data fidelity mirrors production distributions with over 90% accuracy.
+
+---
+
+## 🔒 Security & Data Sovereignty
+
+Engineered for the most stringent compliance environments:
+- **Differential Privacy (ε-DP)**: Mathematical noise injection to prevent production data leakage.
+- **Local-First Processing**: All synthesis happens entirely within your VPC; no raw data is ever transmitted to external AI services.
+- **PII Shield**: Automatic Named Entity Recognition (NER) to identify and synthesize sensitive identifiers recursively.
+
+---
+
+## 🌐 Next Steps
+
+- [Getting Started](/docs/getting-started) — Infrastructure setup and orchestration
+- [Synthesis Terminal](/docs/dashboard) — Monitor your distributed cluster
+- [API Reference](/docs/api-reference) — Precision integration specs
+
