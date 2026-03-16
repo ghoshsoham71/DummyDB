@@ -1,4 +1,4 @@
-# BurstDB Synthesis Systems
+# BurstDB 
 
 **BurstDB** is a state-of-the-art generative data synthesis platform designed for the modern, data-sovereign enterprise. It enables engineering teams to create high-fidelity, architecturally-aware synthetic databases for development, testing, and analytics without production data risk.
 
