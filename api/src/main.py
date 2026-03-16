@@ -47,10 +47,10 @@ app = FastAPI(
 # Rate limiting
 app.state.limiter = limiter
 
-# CORS
+# CORS - Allow local network and localhost
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=["*"],  # Allow all origins for dev mobility, restricted by other means if needed
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

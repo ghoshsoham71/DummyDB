@@ -1,6 +1,18 @@
 import { supabase } from "./supabase";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/v1";
+const getApiBase = () => {
+  if (typeof window !== "undefined") {
+    const protocol = window.location.protocol;
+    const hostname = window.location.hostname;
+    // If we're on a non-localhost domain/IP, assume the API is at the same host on port 8000
+    if (hostname !== "localhost" && hostname !== "127.0.0.1") {
+      return `${protocol}//${hostname}:8000/api/v1`;
+    }
+  }
+  return process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/v1";
+};
+
+const API_BASE = getApiBase();
 
 /* ─── Types ─── */
 
